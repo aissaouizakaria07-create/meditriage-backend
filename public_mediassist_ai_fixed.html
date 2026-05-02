@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MediAssist AI</title>
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiTWVkaUFzc2lzdCBBSSIsInNob3J0X25hbWUiOiJNZWRpQXNzaXN0Iiwic3RhcnRfdXJsIjoiLiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiMwZTFhMTYiLCJ0aGVtZV9jb2xvciI6IiMwMGM4OTYifQ==">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js"></script>
+<script>
+tailwind.config={theme:{extend:{colors:{m:{p:'#00C896',pd:'#00a07a',bg:'#0e1a16',card:'#111f18',card2:'#192820',border:'rgba(0,200,150,0.18)',text:'#e8f5ef',text2:'#7aaa90',text3:'#4a7a60',accent:'#FF8B94',caution:'#FFD93D',info:'#4A90A4'}}}}}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+:root{--p:#00C896;--pd:#00a07a;--bg:#0e1a16;--card:#111f18;--card2:#192820;--border:rgba(0,200,150,0.18);--text:#e8f5ef;--text2:#7aaa90;--text3:#4a7a60;--red:#ff4d6d;--yellow:#FFD93D;--info:#4A90A4;--radius:18px;}
+body.light{--bg:#F4FBF8;--card:#ffffff;--card2:#f5f9f7;--border:rgba(74,144,164,0.2);--text:#0D2B20;--text2:#5a8a7a;--text3:#9ab8b0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);height:100dvh;overflow:hidden;font-size:14px;transition:background .3s,color .3s;}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden;background:var(--bg);}
+.screen.active{display:flex;}
+@keyframes floatA{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-16px) rotate(5deg)}}
+@keyframes floatB{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-22px) rotate(-6deg)}}
+@keyframes floatC{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-12px) rotate(8deg)}}
+@keyframes ecgDraw{0%{stroke-dashoffset:300}100%{stroke-dashoffset:0}}
+.ecg-stroke{stroke-dasharray:300;stroke-dashoffset:300;animation:ecgDraw 2s linear infinite;}
+@keyframes hb{0%,100%{transform:scale(1)}14%{transform:scale(1.12)}28%{transform:scale(1)}42%{transform:scale(1.08)}70%{transform:scale(1)}}
+.heartbeat{animation:hb 1.5s ease-in-out infinite;}
+@keyframes tdot{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+.tdot{animation:tdot 1.4s infinite ease-in-out both;width:4px;height:4px;border-radius:50%;background:var(--p);display:inline-block;margin:0 1px;}
+.tdot:nth-child(1){animation-delay:-.32s}.tdot:nth-child(2){animation-delay:-.16s}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.msg-in{animation:msgIn .3s ease-out;}
+@keyframes wave{0%,100%{scaleY(0.4)}50%{scaleY(1)}}
+.mood-btn{transition:.2s;cursor:pointer;}
+.mood-btn:active{transform:scale(.85);}
+.msg-wrap{position:relative;-webkit-user-select:none;user-select:none;}
+.msg-reactions{position:absolute;top:-36px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--border);border-radius:50px;padding:4px 8px;display:flex;gap:6px;box-shadow:0 4px 20px rgba(0,0,0,.3);z-index:10;white-space:nowrap;}
+.drawer{position:absolute;left:0;top:0;bottom:0;width:280px;background:var(--card);border-right:1px solid var(--border);z-index:30;transform:translateX(-100%);transition:.35s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;}
+.drawer.open{transform:translateX(0);}
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.55);z-index:29;opacity:0;pointer-events:none;transition:.3s;}
+.overlay.open{opacity:1;pointer-events:all;}
+.toggle{width:44px;height:24px;border-radius:12px;background:var(--card2);border:1px solid var(--border);position:relative;cursor:pointer;transition:.3s;}
+.toggle.on{background:var(--p);}
+.tknob{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--text2);transition:.3s;}
+.toggle.on .tknob{left:23px;background:#fff;}
+.chip{padding:.4rem .9rem;background:var(--card);border:1px solid var(--border);border-radius:50px;font-size:12px;color:var(--text2);cursor:pointer;white-space:nowrap;transition:.15s;}
+.chip:active{background:rgba(0,200,150,.15);border-color:var(--p);color:var(--p);}
+.tab-bar{display:flex;background:var(--card);border-top:1px solid var(--border);}
+.tab{flex:1;padding:.6rem .25rem;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;font-size:10px;color:var(--text3);transition:.2s;}
+.tab.active{color:var(--p);}
+.tab-dot{width:4px;height:4px;border-radius:50%;background:var(--p);opacity:0;}
+.tab.active .tab-dot{opacity:1;}
+@keyframes barGrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.bar{transform-origin:bottom;animation:barGrow .6s ease-out forwards;}
+@keyframes voiceWave{0%,100%{height:4px}50%{height:20px}}
+.vbar{width:3px;border-radius:2px;background:var(--p);animation:voiceWave .5s ease-in-out infinite;}
+.vbar:nth-child(2){animation-delay:.1s}.vbar:nth-child(3){animation-delay:.2s}.vbar:nth-child(4){animation-delay:.15s}.vbar:nth-child(5){animation-delay:.05s}
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.glass{background:rgba(255,255,255,.08);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+body.light .glass{background:rgba(255,255,255,.85);}
+.badge-red{background:rgba(255,77,109,.15);color:#ff4d6d;border:1px solid rgba(255,77,109,.3);}
+.badge-yellow{background:rgba(255,215,61,.15);color:#c8920a;border:1px solid rgba(255,215,61,.3);}
+.badge-green{background:rgba(0,200,150,.15);color:#00C896;border:1px solid rgba(0,200,150,.3);}
+textarea,input[type=text],input[type=email],input[type=password],input[type=number],select{background:var(--card2);border:1px solid var(--border);border-radius:14px;color:var(--text);font-family:'DM Sans',sans-serif;outline:none;}
+textarea:focus,input:focus,select:focus{border-color:var(--p);}
+.summary-card{background:linear-gradient(135deg,rgba(0,200,150,.12),rgba(74,144,164,.08));border:1px solid var(--border);border-radius:20px;padding:1rem;}
+.mood-emoji{font-size:28px;transition:.2s;cursor:pointer;}
+.mood-emoji.selected{transform:scale(1.3);filter:drop-shadow(0 0 8px rgba(0,200,150,.6));}
+.modal-bg{position:absolute;inset:0;background:rgba(0,0,0,.6);z-index:40;display:flex;align-items:flex-end;}
+.modal-sheet{background:var(--card);border-radius:24px 24px 0 0;padding:1.5rem;width:100%;}
+.graph-container{overflow-x:auto;padding-bottom:.5rem;}
+@media(min-width:768px){#auth{flex-direction:row;}.auth-panel-left{flex:1;display:flex;flex-direction:column;justify-content:center;padding:3rem;}.auth-panel-right{width:380px;background:linear-gradient(160deg,#0e2a20,#0a1f18);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;border-left:1px solid var(--border);}body.light #auth .auth-panel-right{background:linear-gradient(160deg,#e0f0ea,#c5e5d8);}}
+.header-strip{height:20px;width:100%;background-repeat:repeat-x;background-size:80px 20px;opacity:.15;pointer-events:none;}
+@keyframes pulse-ring{0%{transform:scale(1);opacity:1}100%{transform:scale(2);opacity:0}}
+.voice-ring{position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--p);animation:pulse-ring 1.5s ease-out infinite;}
+.profile-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:1.25rem;margin-bottom:.75rem;}
+.reminder-item{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:.75rem 1rem;display:flex;align-items:center;gap:12px;margin-bottom:.5rem;}
+.map-placeholder{background:var(--card2);border:1px dashed var(--border);border-radius:16px;height:200px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:16px;height:16px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;display:inline-block;}
+.urgency-red{border-left:4px solid #ff4d6d !important;}
+.urgency-yellow{border-left:4px solid #FFD93D !important;}
+.urgency-green{border-left:4px solid #00C896 !important;}
+.tts-btn{width:24px;height:24px;border-radius:50%;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s;}
+.tts-btn:hover{background:var(--p);color:#0a1a10;}
+.qr-placeholder{width:120px;height:120px;background:var(--card2);border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:48px;}
+[dir="rtl"] .drawer{left:auto;right:0;transform:translateX(100%);}
+[dir="rtl"] .drawer.open{transform:translateX(0);}
+@media(max-width:767px){.auth-panel-right{display:none !important;}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback,useContext,createContext,useMemo}=React;
+
+// ═══════════════════════════════════════════════════════════════
+// MEDICAL KNOWLEDGE BASE
+// ═══════════════════════════════════════════════════════════════
+const MEDICAL_KNOWLEDGE={conditions:[
+{id:'grippe',name:'Grippe / Etat grippal',symptoms:['fievre','frissons','courbatures','mal de tete','fatigue','toux','mal de gorge','nez bouche'],redFlags:['fievre>39C>48h','difficultes respiratoires','confusion','raideur nuque'],explanation:'Infection respiratoire aigue par le virus influenza. Inflammation des voies respiratoires.',immediateActions:['Repos absolu + hydratation abondante','Surveillance temperature toutes 4-6h','Aeration reguliere','Isolement (contagion)'],medications:[{name:'Paracetamol',dosage:'500mg-1g toutes 4-6h (max 4g/j)',cautions:'Ne pas depasser la dose max. Verifier allergies.'},{name:'Ibuprofene',dosage:'200-400mg toutes 6-8h (max 1200mg/j)',cautions:'Eviter si ulcere, insuffisance renale, grossesse'}],recommendation:'Gestion a domicile. Consulter si symptomes>5j ou aggravation.',severity:'moderee'},
+{id:'gastro',name:'Gastro-enterite',symptoms:['nausees','vomissements','diarrhee','douleurs abdominales','fievre','crampes','fatigue'],redFlags:['sang dans selles','vomissements>24h','deshydratation severe','fievre>38.5C','douleur severe'],explanation:'Inflammation estomac/intestins, generalement virale ou bacterienne.',immediateActions:['Rehydratation orale : petites gorgees frequentes','Regime BRAT (Bananes, Riz, Compote, Pain toast)','Repos digestif : eviter gras/epice/lactes','Surveillance selles et temperature'],medications:[{name:'Smecta',dosage:'3 sachets/j entre repas',cautions:'Espacer 2h des autres medicaments'},{name:'Loperamide',dosage:'2mg initialement, 2mg/selle liquide (max 8mg/j)',cautions:'CONTRE-INDIQUE si fievre ou sang dans selles'},{name:'Paracetamol',dosage:'500mg toutes 6h si fievre',cautions:'Respecter doses max'}],recommendation:'Auto-traitement 24-48h. Consultation si persistance ou signes gravite.',severity:'moderee'},
+{id:'migraine',name:'Migraine / Cephalee',symptoms:['mal de tete','nausees','sensibilite lumiere','sensibilite bruit','vision trouble','douleur pulsatile'],redFlags:['cephalee brutale coup de tonnerre','perte conscience','paralysie soudaine','troubles vision soudains','fievre+raideur nuque','traumatisme cranien'],explanation:'Cephalee primaire : douleur intense pulsatile unilaterale + nausees + photophobie.',immediateActions:['Repos piece calme et obscure','Compresses froides front','Hydratation','Eviter ecrans et lumiere vive'],medications:[{name:'Paracetamol',dosage:'1g toutes 6h',cautions:'Premier choix'},{name:'Ibuprofene',dosage:'400mg au debut de la crise',cautions:'Pendant un repas. Eviter si ulcere.'},{name:'Aspirine',dosage:'500mg-1g',cautions:'JAMAIS enfant<16ans (syndrome de Reye)'}],recommendation:'Auto-traitement possible. Consulter si>4 crises/mois ou changement de pattern.',severity:'moderee'},
+{id:'brulure',name:'Brulure thermique',symptoms:['rougeur','douleur','ampoules','peau blanchatre','gonflement'],redFlags:['brulure>10% surface','visage/mains/pieds/OG','brulure profonde blanche/carbonisee','electrique ou chimique','inhalation fumee'],explanation:'Lesion tissulaire par chaleur, electricite ou rayonnement. Gravite selon profondeur/etendue.',immediateActions:['Refroidir eau froide courante 15-20min','Ne pas percer les ampoules','Retirer bijoux/vetements (sauf si colles)','Couvrir film plastique propre'],medications:[{name:'Paracetamol',dosage:'1g toutes 6h',cautions:'Pas de pommade sans avis medical sur brulure fraiche'},{name:'Biafine',dosage:'Couche epaisse 2-3x/j',cautions:'Ne pas utiliser sur brulure infectee'}],recommendation:'Superficielle<3cm: auto-soins. Au-dela: URGENCES. Jamais beurre/huile!',severity:'variable'},
+{id:'entorse',name:'Entorse / Foulure',symptoms:['douleur articulaire','gonflement','hematome','difficulte bouger','craquement'],redFlags:['deformation visible','incapacite totale','douleur intense os','engourdissement','peau froide/bleue'],explanation:'Etirement ou dechirure ligamentaire suite a un mouvement force.',immediateActions:['Immobilisation (Protection)','Glace 15-20min toutes 2-3h (proteger peau)','Compression bandage elastique','Elevation au-dessus du coeur'],medications:[{name:'Paracetamol',dosage:'1g toutes 6h',cautions:'Premiere intention'},{name:'Ibuprofene',dosage:'400mg toutes 8h pendant 3-5j',cautions:'Au cours d un repas. Contre-indique si ulcere.'}],recommendation:'Suspicion fracture ou dechirure complete: radio/urgences. Sinon: repos 48h + reeducation.',severity:'moderee'},
+{id:'allergie',name:'Reaction allergique',symptoms:['eruption cutanee','demangeaisons','gonflement','eternuements','yeux larmoyants','nez qui coule','toux'],redFlags:['difficulte respirer/avaler','gonflement langue/levres','oppression thoracique','perte conscience','choc anaphylactique'],explanation:'Reponse immunitaire excessive a un allergene. Locale ou generalisee.',immediateActions:['Eloignement allergene','Si piqure: retirer le dard','Compresses froides zones gonflees','Surveillance signes gravite'],medications:[{name:'Cetirizine',dosage:'10mg/j adulte',cautions:'Somnolence possible. Eviter conduite.'},{name:'Hydrocortisone topique',dosage:'Fine couche 1-2x/j',cautions:'Pas sur visage>5j'}],recommendation:'Localisee: antihistaminique. Signes gravite: APPELER 15 IMMEDIATEMENT.',severity:'variable'},
+{id:'hypertension',name:'Crise hypertensive',symptoms:['mal de tete severe','nausees','vertiges','vision trouble','oppression thoracique','essoufflement','saignement de nez'],redFlags:['PA>180/120mmHg','douleur thoracique','confusion','convulsions','oedeme MI'],explanation:'Elevation brutale de la PA pouvant endommager les organes vitaux.',immediateActions:['Repos demi-assis','Calme, eviter stress','Surveillance tension si tensiometre','Ne pas prendre medicament supplementaire'],medications:[{name:'AUCUN automedication',dosage:'N/A',cautions:'Antihypertenseurs necessitent avis medical'}],recommendation:'URGENCE MEDICALE. Appeler 15 ou urgences immediatement.',severity:'critique'},
+{id:'angine',name:'Angine',symptoms:['mal de gorge','difficulte avaler','fievre','ganglions','toux','maux de tete'],redFlags:['difficulte respiratoire','salivation excessive','incapacite ouvrir bouche','voix metallique','asymetrie gorge'],explanation:'Inflammation amygdales/pharynx, souvent virale (80%) ou bacterienne (strep A).',immediateActions:['Gargarismes eau tiede salee','Hydratation abondante','Repos vocal','Humidification air'],medications:[{name:'Paracetamol',dosage:'1g toutes 6h',cautions:'Verifier allergies'},{name:'Spray analgesique local',dosage:'3-4 pulsations 3-6x/j',cautions:'Max 5-7 jours'}],recommendation:'Fievre>38.5C>3j ou plaques blanches: consultation + test strepto.',severity:'moderee'},
+{id:'avc',name:'AVC - Accident Vasculaire Cerebral',symptoms:['paralysie soudaine unilaterale','troubles parole','vision trouble','mal de tete brutal','vertiges','troubles equilibre'],redFlags:['symptomes soudains','deficit neurologique','perte conscience'],explanation:'Interruption brutale de l irrigation sanguine cerebrale. URGENCE VITALE ABSOLUE.',immediateActions:['Noter l heure d apparition (crucial pour traitement)','Allonger tete surelevee','Ne rien faire avaler','Rassurer la personne'],medications:[{name:'AUCUN',dosage:'N/A',cautions:'Pas d aspirine sans avis (risque hemorragique)'}],recommendation:'AVC = URGENCE VITALE. APPELER 15 IMMEDIATEMENT. Chaque minute compte.',severity:'critique'},
+{id:'infarctus',name:'Infarctus du myocarde',symptoms:['douleur thoracique intense','oppression','irradiation bras gauche/machoire/dos','sueurs','nausees','essoufflement','anxiete intense'],redFlags:['douleur>15min','choc','perte conscience','arythmie severe'],explanation:'Necrose du myocarde par occlusion coronaire. Urgence vitale necessitant reperfusion urgente.',immediateActions:['Allonger demi-assis','APPELER 15 IMMEDIATEMENT','Aspirine 250mg a croquer (si pas allergie)','Deshabiller, rassurer, surveiller'],medications:[{name:'Aspirine',dosage:'250mg a croquer',cautions:'Si pas d allergie et pas de saignement actif'},{name:'Trinitrine',dosage:'1 spray sublingual',cautions:'Si PA>100mmHg systolique et prescrite'}],recommendation:'DOULEUR THORACIQUE = URGENCE CARDIAQUE. APPELER 15. Ne pas conduire.',severity:'critique'},
+{id:'anaphylaxie',name:'Choc anaphylactique',symptoms:['difficulte respiratoire','gonflement langue/levres','urticaire generalisee','malaise','tachycardie','hypotension','perte conscience'],redFlags:['tous les symptomes','deterioration rapide'],explanation:'Reaction allergique systemique severe potentiellement mortelle. Liberation massive d histamine.',immediateActions:['Adrenaline auto-injectable (EpiPen) cuisse si disponible','Allonger jambes surelevees','Appeler 15','Antihistaminique si pas d EpiPen'],medications:[{name:'Adrenaline EpiPen',dosage:'IM face externe cuisse',cautions:'Reinjecter 5-15min si pas amelioration'}],recommendation:'URGENCE VITALE. Adrenaline + appel 15. Hospitalisation systematique.',severity:'critique'},
+{id:'anxiete',name:'Crise d angoisse / Anxiete',symptoms:['palpitations','essoufflement','etouffement','vertiges','transpiration','tremblements','peur de mourir','engourdissements'],redFlags:['douleur thoracique irradiant','perte conscience','pensees suicidaires'],explanation:'Episode soudain d intense peur accompagne de symptomes physiques marques, sans danger vital reel.',immediateActions:['Respiration controlee: inspirez 4s, retenez 4s, expirez 4s','Technique 5-4-3-2-1 (5 choses visibles, 4 touchables...)','Se rassurer: Ceci passera','S asseoir/s allonger confortablement'],medications:[{name:'Aucun sans ordonnance',dosage:'N/A',cautions:'Anxiolytiques necessitent prescription'}],recommendation:'Premiere crise ou doute: consultation pour eliminer cause organique. Crises recurrentes: suivi psy.',severity:'moderee'},
+{id:'fracture',name:'Fracture',symptoms:['douleur intense','deformation','gonflement','hematome','impotence fonctionnelle','crepitation'],redFlags:['fracture ouverte','choc','atteinte tete avec perte conscience','fracture bassin/femur'],explanation:'Rupture de la continuite osseuse. Necessite immobilisation et parfois reduction chirurgicale.',immediateActions:['Immobiliser au-dessus et en-dessous','Ne pas tenter de remettre en place','Glace sur gonflement (proteger peau)','Fracture ouverte: pansement sterile'],medications:[{name:'Paracetamol',dosage:'1g toutes les 6h',cautions:'En attendant les soins'}],recommendation:'Toute fracture suspectee: radio + avis medical. Ouverte/bassin/femur: SAMU (15).',severity:'critique'},
+{id:'appendicite',name:'Appendicite',symptoms:['douleur ombilicale puis FID','fievre','nausees','vomissements','anorexie','contracture musculaire'],redFlags:['douleur diffuse+rigidite','fievre>38.5C','vomissements persistants','peritonite'],explanation:'Inflammation appendice necessitant ablation chirurgicale urgente pour eviter perforation.',immediateActions:['Jeune absolu (ni boire ni manger)','Ne pas prendre de laxatifs','Ne pas appliquer chaleur abdomen','Transport urgences'],medications:[{name:'AUCUN',dosage:'N/A',cautions:'Pas de medicament par bouche. Risque intervention.'}],recommendation:'SUSPICION APPENDICITE = URGENCES CHIRURGICALES. Jeune absolu.',severity:'critique'},
+{id:'bronchite',name:'Bronchite aigue',symptoms:['toux','expectorations','fievre','fatigue','douleur thoracique a la toux','sifflements'],redFlags:['dyspnee','cyanose','hemoptysie','confusion','fievre>39C persistante'],explanation:'Inflammation des bronches, souvent virale, manifestee par toux productive.',immediateActions:['Hydratation abondante','Humidification air','Repos','Eviter tabac et irritants'],medications:[{name:'Paracetamol',dosage:'1g toutes les 6h si fievre',cautions:'Analgesique/antipyretique'},{name:'Sirop antitussif',dosage:'Selon prescription',cautions:'Toux seche genante uniquement'}],recommendation:'Majoritairement virale: antibiotiques inutiles. Consulter si dyspnee, fievre persistante ou terrain a risque.',severity:'moderee'},
+{id:'pneumonie',name:'Pneumonie',symptoms:['fievre elevee','toux productive','dyspnee','douleur thoracique','frissons','fatigue'],redFlags:['FR>30/min','PA<90mmHg','confusion','cyanose'],explanation:'Infection aigue du parenchyme pulmonaire, bacterienne 50%, necessitant souvent antibiotherapie.',immediateActions:['Repos strict','Hydratation','Surveillance frequence respiratoire','Antipyretiques si fievre','Consultation medicale urgente'],medications:[{name:'Amoxicilline',dosage:'1g x3/j pendant 7j',cautions:'Verifier allergies penicillines'},{name:'Paracetamol',dosage:'1g toutes les 6h si fievre',cautions:'Max 4g/j'}],recommendation:'Pneumonie = consultation urgente. Radio + bilan. Hospitalisation si criteres gravite.',severity:'critique'},
+{id:'constipation',name:'Constipation',symptoms:['selles rares','selles dures','efforts defecation','ballonnements','douleurs abdominales'],redFlags:['sang dans selles','perte de poids inexpliquée','vomissements associes','douleur severe'],explanation:'Frequence selles<3/semaine et/ou selles dures difficiles a expulser.',immediateActions:['Augmenter fibres (fruits, legumes, cereales completes)','Hydratation 1.5-2L eau/j','Activite physique','Routine toilette reguliere'],medications:[{name:'Macrogol (Forlax)',dosage:'1-2 sachets/j dans eau',cautions:'Effet en 24-48h'},{name:'Suppositoires glycerine',dosage:'1 au besoin',cautions:'Usage occasionnel'}],recommendation:'Regime+hydratation en premiere ligne. Consulter si>2 semaines ou signes alarme.',severity:'benigne'},
+{id:'vertige',name:'Vertiges',symptoms:['sensation rotation','instabilite','nausees','sueurs','troubles vision','malaise'],redFlags:['vertige inaugural brutal','diplopie','dysarthrie','faiblesse unilaterale','troubles deglutition'],explanation:'Vertiges peripheriques (oreille interne) ou centraux (SNC). Centraux plus graves.',immediateActions:['S allonger pour eviter chute','Ne pas conduire','Fixer un point','Hydratation'],medications:[{name:'Betahistine',dosage:'16-24mg 3x/j',cautions:'Prescription. Contre-indique si pheochromocytome.'}],recommendation:'Vertige inaugural+signes neurologiques: URGENCES (AVC possible). VPPB: kine vestibulaire.',severity:'variable'},
+]};
+
+function matchConditions(text){
+  const low=text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const words=low.split(/[\s,;.!?]+/).filter(w=>w.length>2);
+  return MEDICAL_KNOWLEDGE.conditions.map(c=>{
+    let s=0;
+    const cLow=c.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    c.symptoms.forEach(sym=>{
+      const sl=sym.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      words.forEach(w=>{if(sl.includes(w)||w.includes(sl.split(' ')[0]))s+=2;});
+      if(low.includes(sl))s+=5;
+    });
+    c.redFlags.forEach(rf=>{
+      const rfl=rf.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      words.forEach(w=>{if(rfl.includes(w))s+=8;});
+      if(low.includes(rfl))s+=15;
+    });
+    return {...c,score:s};
+  }).filter(c=>c.score>0).sort((a,b)=>b.score-a.score).slice(0,3);
+}
+
+const SEV={
+  critique:{badge:'badge-red',label:'🔴 URGENCE',urgency:'red',color:'#ff4d6d'},
+  moderee:{badge:'badge-yellow',label:'🟡 Consultation recommandee',urgency:'yellow',color:'#FFD93D'},
+  benigne:{badge:'badge-green',label:'🟢 Soins a domicile',urgency:'green',color:'#00C896'},
+  variable:{badge:'badge-green',label:'🔵 Variable selon symptomes',urgency:'green',color:'#4A90A4'}
+};
+
+const I18N={
+  fr:{appName:'MediAssist AI',appTagline:"L'assistant medical le plus fiable de sa categorie.",welcome:"Bonjour ! Je suis MediAssist, votre assistant medical. Decrivez vos symptomes ou repondez au questionnaire guide pour commencer.",newConsult:'Nouvelle consultation',history:'Mon historique',exportPDF:'Exporter en PDF',shareChat:'Partager la consultation',medReminders:'Rappels medicaments',findClinic:'Clinique la plus proche',symptomGraph:'Graphique symptomes',moodTracker:'Suivi humeur',profile:'Mon profil',about:'A propos',logout:'Se deconnecter',login:'Connexion',register:'Inscription',guest:'Mode invite',guestDesc:'Acces complet sans compte. Creez un compte pour sauvegarder.',tryGuest:'Essayer',email:'Email',password:'Mot de passe',name:'Nom complet',submit:'Valider',skip:'Passer',next:'Suivant',start:'Commencer',disclaimer:'⚕️ Assistant IA — Ne remplace pas un medecin. Urgence : 15 ou 112',disclaimerFull:"⚠️ Cet assistant fournit des informations a titre indicatif uniquement et ne remplace en aucun cas une consultation medicale professionnelle. En cas d'urgence, appelez le 15 (SAMU) ou le 112.",placeholder:'Decrivez vos symptomes...',send:'Envoyer',attach:'Joindre une image',voiceRecord:'Appuyer et maintenir pour parler',analyzing:'Analyse en cours...',qcmPain:'Ou ressentez-vous une douleur ?',qcmDuration:'Depuis combien de temps ?',qcmFever:'Avez-vous de la fievre ?',qcmHistory:'Avez-vous des antecedents medicaux ?',writeInstead:'Ecrire a la place',analyze:'Analyser',quickMeds:'Quels medicaments ?',quickSerious:'Est-ce grave ?',quickWhen:'Quand consulter ?',quickFirstAid:'Premiers secours ?',sessionSummary:'Resume de la session',symptoms:'Symptomes',probableCondition:'Condition probable',urgency:'Niveau d urgence',actions:'Actions recommandees',export:'Exporter',close:'Fermer',darkMode:'Mode sombre',lightMode:'Mode clair',language:'Langue',french:'Français',english:'English',arabic:'العربية',bloodType:'Groupe sanguin',allergies:'Allergies connues',conditions:'Maladies chroniques',age:'Age',sex:'Sexe',save:'Sauvegarder',cancel:'Annuler',noHistory:'Aucune consultation enregistree',consultDate:'Date de consultation',addReminder:'Ajouter un rappel',medName:'Nom du medicament',dosage:'Dosage',time:'Heure',frequency:'Frequence',daily:'Quotidien',weekly:'Hebdomadaire',reminders:'Mes rappels',noReminders:'Aucun rappel configure',nearestPharmacy:'Pharmacie la plus proche',nearestClinic:'Clinique la plus proche',openMaps:'Ouvrir dans Maps',moodToday:'Comment vous sentez-vous aujourd hui ?',moodHistory:'Historique humeur',shareLink:'Lien de partage',copyLink:'Copier le lien',shareEnabled:'Partage active',shareDisabled:'Partage desactive',reactionLike:'👍 Utile',reactionCopy:'📋 Copier',reactionWarn:'⚠️ Signaler',reactionSave:'🔖 Sauvegarder',speak:'Lire a haute voix',stopSpeak:'Arreter',recording:'Enregistrement...',certifTitle:'Analyse de certificat medical',certifUpload:'Telecharger un certificat',certifDiagnosis:'Diagnostic',certifMeds:'Medicaments prescrits',certifDoctor:'Medecin',certifDate:'Date',certifRecommendations:'Recommandations'},
+  en:{appName:'MediAssist AI',appTagline:'The most trusted medical companion in its class.',welcome:'Hello! I am MediAssist, your medical assistant. Describe your symptoms or use the guided questionnaire to begin.',newConsult:'New consultation',history:'My history',exportPDF:'Export to PDF',shareChat:'Share consultation',medReminders:'Medication reminders',findClinic:'Nearest clinic',symptomGraph:'Symptom graph',moodTracker:'Mood tracker',profile:'My profile',about:'About',logout:'Log out',login:'Login',register:'Register',guest:'Guest mode',guestDesc:'Full access without account. Create an account to save.',tryGuest:'Try it',email:'Email',password:'Password',name:'Full name',submit:'Submit',skip:'Skip',next:'Next',start:'Start',disclaimer:'⚕️ AI Assistant — Not a substitute for a doctor. Emergency: 15 or 112',disclaimerFull:'⚠️ This assistant provides information for guidance only and is in no way a substitute for professional medical advice. In case of emergency, call 15 (SAMU) or 112.',placeholder:'Describe your symptoms...',send:'Send',attach:'Attach image',voiceRecord:'Press and hold to speak',analyzing:'Analyzing...',qcmPain:'Where do you feel pain?',qcmDuration:'How long has it been?',qcmFever:'Do you have a fever?',qcmHistory:'Do you have any medical history?',writeInstead:'Write instead',analyze:'Analyze',quickMeds:'What medications?',quickSerious:'Is it serious?',quickWhen:'When to consult?',quickFirstAid:'First aid?',sessionSummary:'Session summary',symptoms:'Symptoms',probableCondition:'Probable condition',urgency:'Urgency level',actions:'Recommended actions',export:'Export',close:'Close',darkMode:'Dark mode',lightMode:'Light mode',language:'Language',french:'Français',english:'English',arabic:'العربية',bloodType:'Blood type',allergies:'Known allergies',conditions:'Chronic conditions',age:'Age',sex:'Sex',save:'Save',cancel:'Cancel',noHistory:'No consultations recorded',consultDate:'Consultation date',addReminder:'Add reminder',medName:'Medication name',dosage:'Dosage',time:'Time',frequency:'Frequency',daily:'Daily',weekly:'Weekly',reminders:'My reminders',noReminders:'No reminders configured',nearestPharmacy:'Nearest pharmacy',nearestClinic:'Nearest clinic',openMaps:'Open in Maps',moodToday:'How do you feel today?',moodHistory:'Mood history',shareLink:'Share link',copyLink:'Copy link',shareEnabled:'Sharing enabled',shareDisabled:'Sharing disabled',reactionLike:'👍 Useful',reactionCopy:'📋 Copy',reactionWarn:'⚠️ Report',reactionSave:'🔖 Save',speak:'Read aloud',stopSpeak:'Stop',recording:'Recording...',certifTitle:'Medical certificate analysis',certifUpload:'Upload certificate',certifDiagnosis:'Diagnosis',certifMeds:'Prescribed medications',certifDoctor:'Doctor',certifDate:'Date',certifRecommendations:'Recommendations'},
+  ar:{appName:'MediAssist AI',appTagline:'الرفيق الطبي الاكثر موثوقية في فئته.',welcome:'مرحباً! أنا MediAssist، مساعدك الطبي. صف أعراضك أو استخدم الاستبيان الموجه للبدء.',newConsult:'استشارة جديدة',history:'سجل consultations',exportPDF:'تصدير PDF',shareChat:'مشاركة الاستشارة',medReminders:'تذكيرات الأدوية',findClinic:'أقرب عيادة',symptomGraph:'رسم الأعراض',moodTracker:'تتبع المزاج',profile:'ملفي الشخصي',about:'حول',logout:'تسجيل الخروج',login:'تسجيل الدخول',register:'إنشاء حساب',guest:'وضع الضيف',guestDesc:'وصول كامل بدون حساب. أنشئ حساباً للحفظ.',tryGuest:'جرب',email:'البريد الإلكتروني',password:'كلمة المرور',name:'الاسم الكامل',submit:'إرسال',skip:'تخطي',next:'التالي',start:'ابدأ',disclaimer:'⚕️ مساعد ذكاء اصطناعي — لا يغني عن الطبيب. طوارئ: 15 أو 112',disclaimerFull:'⚠️ يقدم هذا المساعد معلومات إرشادية فقط ولا يغني بأي حال عن استشارة طبية مهنية. في حالة الطوارئ، اتصل بـ 15 (SAMU) أو 112.',placeholder:'صف أعراضك...',send:'إرسال',attach:'إرفاق صورة',voiceRecord:'اضغط مع الاستمرار للتحدث',analyzing:'جاري التحليل...',qcmPain:'أين تشعر بالألم؟',qcmDuration:'منذ متى؟',qcmFever:'هل لديك حمى؟',qcmHistory:'هل لديك تاريخ طبي؟',writeInstead:'اكتب بدلاً من ذلك',analyze:'تحليل',quickMeds:'ما هي الأدوية؟',quickSerious:'هل هو خطير؟',quickWhen:'متى تستشير؟',quickFirstAid:'إسعافات أولية؟',sessionSummary:'ملخص الجلسة',symptoms:'الأعراض',probableCondition:'الحالة المحتملة',urgency:'مستوى الطوارئ',actions:'الإجراءات الموصى بها',export:'تصدير',close:'إغلاق',darkMode:'الوضع الداكن',lightMode:'الوضع الفاتح',language:'اللغة',french:'Français',english:'English',arabic:'العربية',bloodType:'فصيلة الدم',allergies:'حساسيات معروفة',conditions:'أمراض مزمنة',age:'العمر',sex:'الجنس',save:'حفظ',cancel:'إلغاء',noHistory:'لا توجد استشارات مسجلة',consultDate:'تاريخ الاستشارة',addReminder:'إضافة تذكير',medName:'اسم الدواء',dosage:'الجرعة',time:'الوقت',frequency:'التكرار',daily:'يومي',weekly:'أسبوعي',reminders:'تذكيراتي',noReminders:'لا توجد تذكيرات',nearestPharmacy:'أقرب صيدلية',nearestClinic:'أقرب عيادة',openMaps:'فتح في الخرائط',moodToday:'كيف تشعر اليوم؟',moodHistory:'سجل المزاج',shareLink:'رابط المشاركة',copyLink:'نسخ الرابط',shareEnabled:'المشاركة مفعلة',shareDisabled:'المشاركة معطلة',reactionLike:'👍 مفيد',reactionCopy:'📋 نسخ',reactionWarn:'⚠️ إبلاغ',reactionSave:'🔖 حفظ',speak:'قراءة بصوت عالٍ',stopSpeak:'إيقاف',recording:'جاري التسجيل...',certifTitle:'تحليل الشهادة الطبية',certifUpload:'تحميل شهادة',certifDiagnosis:'التشخيص',certifMeds:'الأدوية الموصوفة',certifDoctor:'الطبيب',certifDate:'التاريخ',certifRecommendations:'التوصيات'}
+};
+
+function tk(key,lang){return I18N[lang||'fr'][key]||key;}
+
+const ThemeCtx=createContext({dark:true,toggle:()=>{}});
+function ThemeProvider({children}){
+  const[dark,setDark]=useState(()=>{try{return JSON.parse(localStorage.getItem('mt_dark'))!==false;}catch{return true;}});
+  useEffect(()=>{document.body.classList.toggle('light',!dark);localStorage.setItem('mt_dark',JSON.stringify(dark));},[dark]);
+  return <ThemeCtx.Provider value={{dark,toggle:()=>setDark(d=>!d)}}>{children}</ThemeCtx.Provider>;
+}
+
+// ── Backend API base URL (change to your deployed server URL in production) ──
+const API = 'http://localhost:5000/api';
+
+// ── Generic API helper ───────────────────────────────────────────────────────
+async function apiFetch(path, options = {}) {
+  const res = await fetch(API + path, {
+    credentials: 'include',        // send HttpOnly cookie automatically
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    ...options,
+    body: options.body ? (typeof options.body === 'string' ? options.body : JSON.stringify(options.body)) : undefined,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+  return data;
+}
+
+const AuthCtx=createContext(null);
+function AuthProvider({children}){
+  const[user,setUser]=useState(()=>{try{return JSON.parse(localStorage.getItem('mt_user'))||null;}catch{return null;}});
+  const[history,setHistory]=useState([]);
+  const[mood,setMoodData]=useState([]);
+  const[reminders,setReminders]=useState([]);
+  const[profile,setProfile]=useState({name:'',age:'',sex:'',bloodType:'',allergies:'',conditions:''});
+
+  // ── Login / logout ──
+  const login=(u)=>{setUser(u);localStorage.setItem('mt_user',JSON.stringify(u));};
+  const logout=async()=>{
+    try{await apiFetch('/auth/logout',{method:'POST'});}catch{}
+    setUser(null);localStorage.removeItem('mt_user');
+  };
+
+  // ── Sync from backend on mount if user exists ──
+  useEffect(()=>{
+    if(!user||user.isGuest)return;
+    apiFetch('/chat/history').then(setHistory).catch(()=>{});
+    apiFetch('/mood').then(setMoodData).catch(()=>{});
+    apiFetch('/reminders').then(setReminders).catch(()=>{});
+    apiFetch('/profile').then(d=>setProfile(d.profile||{})).catch(()=>{});
+  },[user?.id]);
+
+  // ── History ──
+  const addHistory=(e)=>{
+    if(!user||user.isGuest)return;
+    apiFetch('/chat/history',{method:'POST',body:e}).catch(()=>{});
+    setHistory(prev=>[{...e,date:new Date().toISOString(),id:Date.now()},...prev].slice(0,100));
+  };
+
+  // ── Mood ──
+  const addMood=(entry)=>{
+    if(user&&!user.isGuest){
+      apiFetch('/mood',{method:'POST',body:entry}).catch(()=>{});
+    }
+    setMoodData(prev=>[{...entry,date:new Date().toISOString()},...prev].slice(0,90));
+  };
+
+  // ── Reminders ──
+  const addReminder=async(r)=>{
+    if(user&&!user.isGuest){
+      try{const saved=await apiFetch('/reminders',{method:'POST',body:r});setReminders(prev=>[saved,...prev]);return;}catch{}
+    }
+    setReminders(prev=>[{...r,id:Date.now(),active:true},...prev]);
+  };
+  const toggleReminder=async(id)=>{
+    if(user&&!user.isGuest){
+      try{const updated=await apiFetch(`/reminders/${id}/toggle`,{method:'PATCH'});setReminders(prev=>prev.map(r=>r._id===id||r.id===id?updated:r));return;}catch{}
+    }
+    setReminders(prev=>prev.map(r=>r.id===id?{...r,active:!r.active}:r));
+  };
+  const removeReminder=async(id)=>{
+    if(user&&!user.isGuest){try{await apiFetch(`/reminders/${id}`,{method:'DELETE'});}catch{}}
+    setReminders(prev=>prev.filter(r=>r._id!==id&&r.id!==id));
+  };
+
+  // ── Profile ──
+  const saveProfile=async(p)=>{
+    setProfile(p);
+    if(user&&!user.isGuest){try{await apiFetch('/profile',{method:'PUT',body:p});}catch{}}
+  };
+
+  // ── Share ──
+  const toggleShare=async(chatId)=>{
+    try{
+      const res=await apiFetch('/chat/share',{method:'POST',body:{chatId}});
+      return{enabled:res.shareEnabled,url:res.shareUrl};
+    }catch{return{enabled:false,url:''};}
+  };
+
+  return <AuthCtx.Provider value={{user,login,logout,history,addHistory,mood,addMood,reminders,addReminder,toggleReminder,removeReminder,profile,saveProfile,toggleShare}}>{children}</AuthCtx.Provider>;
+}
+
+const SVGS={
+  dna:<svg viewBox="0 0 60 80"><path d="M18 8 Q42 20 18 40 Q42 60 18 72M42 8 Q18 20 42 40 Q18 60 42 72" stroke="currentColor" strokeWidth="2.5" fill="none"/>{[14,28,42,56].map(y=><line key={y} x1="22" y1={y} x2="38" y2={y+4} stroke="currentColor" strokeWidth="1.5"/>)}</svg>,
+  ecg:<svg viewBox="0 0 120 30"><polyline points="0,15 20,15 30,4 40,26 50,15 75,15 85,8 95,22 105,15 120,15" fill="none" stroke="currentColor" strokeWidth="2.5"/></svg>,
+  cross:<svg viewBox="0 0 40 40"><rect x="15" y="2" width="10" height="36" rx="3" fill="currentColor"/><rect x="2" y="15" width="36" height="10" rx="3" fill="currentColor"/></svg>,
+  pill:<svg viewBox="0 0 70 30"><path d="M20 2 L50 2 Q68 2 68 15 Q68 28 50 28 L20 28 Q2 28 2 15 Q2 2 20 2Z" fill="none" stroke="currentColor" strokeWidth="2.5"/><line x1="35" y1="2" x2="35" y2="28" stroke="currentColor" strokeWidth="2"/></svg>,
+  heart:<svg viewBox="0 0 50 45"><path d="M25 40 C10 28 2 20 2 12 C2 5 8 2 14 2 C19 2 23 5 25 8 C27 5 31 2 36 2 C42 2 48 5 48 12 C48 20 40 28 25 40Z" fill="currentColor"/></svg>,
+  steth:<svg viewBox="0 0 60 70"><circle cx="30" cy="56" r="10" fill="none" stroke="currentColor" strokeWidth="3"/><path d="M14 14 Q14 36 30 46M46 14 Q46 36 30 46" fill="none" stroke="currentColor" strokeWidth="3"/><line x1="14" y1="4" x2="14" y2="18" stroke="currentColor" strokeWidth="3"/><line x1="46" y1="4" x2="46" y2="18" stroke="currentColor" strokeWidth="3"/></svg>,
+  brain:<svg viewBox="0 0 60 60"><path d="M30 8 C18 8 10 16 10 28 C10 42 20 52 30 52 C40 52 50 42 50 28 C50 16 42 8 30 8Z" fill="none" stroke="currentColor" strokeWidth="2.5"/><path d="M30 8 L30 52M10 28 L50 28M18 16 Q30 22 42 16M18 40 Q30 34 42 40" stroke="currentColor" strokeWidth="1.5" fill="none"/></svg>,
+  lungs:<svg viewBox="0 0 60 50"><path d="M8 10 Q4 25 8 40 Q15 45 22 40 Q26 25 22 10 Q15 5 8 10Z" fill="none" stroke="currentColor" strokeWidth="2.5"/><path d="M52 10 Q56 25 52 40 Q45 45 38 40 Q34 25 38 10 Q45 5 52 10Z" fill="none" stroke="currentColor" strokeWidth="2.5"/><line x1="30" y1="5" x2="30" y2="45" stroke="currentColor" strokeWidth="2"/></svg>,
+  virus:<svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="12" fill="none" stroke="currentColor" strokeWidth="2.5"/>{[0,60,120,180,240,300].map(a=>{const rad=a*Math.PI/180;return <line key={a} x1={30+12*Math.cos(rad)} y1={30+12*Math.sin(rad)} x2={30+22*Math.cos(rad)} y2={30+22*Math.sin(rad)} stroke="currentColor" strokeWidth="2.5"/>;})}</svg>,
+  microscope:<svg viewBox="0 0 50 60"><circle cx="25" cy="15" r="10" fill="none" stroke="currentColor" strokeWidth="2.5"/><line x1="25" y1="25" x2="25" y2="45" stroke="currentColor" strokeWidth="3"/><line x1="10" y1="45" x2="40" y2="45" stroke="currentColor" strokeWidth="3"/><line x1="15" y1="55" x2="35" y2="55" stroke="currentColor" strokeWidth="3"/></svg>,
+  syringe:<svg viewBox="0 0 30 60"><rect x="12" y="5" width="6" height="35" fill="none" stroke="currentColor" strokeWidth="2.5"/><rect x="10" y="40" width="10" height="8" fill="none" stroke="currentColor" strokeWidth="2.5"/><line x1="15" y1="48" x2="15" y2="55" stroke="currentColor" strokeWidth="2.5"/><line x1="8" y1="5" x2="22" y2="5" stroke="currentColor" strokeWidth="2.5"/></svg>,
+};
+
+const BG_POS=[
+  {t:'4%',l:'2%',s:70,anim:'floatA 7s ease-in-out infinite',ico:'dna'},
+  {t:'12%',r:'4%',s:80,anim:'floatB 9s ease-in-out infinite',ico:'ecg'},
+  {t:'38%',l:'1%',s:55,anim:'floatC 6s ease-in-out infinite',ico:'cross'},
+  {t:'55%',r:'2%',s:75,anim:'floatA 8s ease-in-out infinite 1s',ico:'pill'},
+  {t:'72%',l:'4%',s:65,anim:'floatB 7s ease-in-out infinite 2s',ico:'heart'},
+  {t:'85%',r:'6%',s:60,anim:'floatC 9s ease-in-out infinite .5s',ico:'steth'},
+  {t:'20%',l:'8%',s:50,anim:'floatA 10s ease-in-out infinite 3s',ico:'brain'},
+  {t:'65%',r:'8%',s:45,anim:'floatB 8s ease-in-out infinite 1.5s',ico:'lungs'},
+  {t:'48%',l:'6%',s:40,anim:'floatC 7s ease-in-out infinite 2.5s',ico:'virus'},
+  {t:'8%',r:'12%',s:35,anim:'floatA 9s ease-in-out infinite .8s',ico:'microscope'},
+];
+
+function BgIcons({color='#00C896',opacity=.08}){
+  return <div style={{position:'absolute',inset:0,pointerEvents:'none',overflow:'hidden',zIndex:0}}>
+    {BG_POS.map((p,i)=>(
+      <div key={i} style={{position:'absolute',top:p.t,left:p.l,right:p.r,width:p.s,height:p.s,color,animation:p.anim,opacity}}>
+        {SVGS[p.ico]}
+      </div>
+    ))}
+  </div>;
+}
+
+function HeaderStrip(){
+  const icons=['🩺','⚕️','💊','🫀','🧬','🦠'];
+  return <div className="header-strip" style={{backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='20'%3E${icons.map((ic,i)=>`<text x='${i*13+6}' y='15' font-size='10' opacity='0.5'>${ic}</text>`).join('')}%3C/svg%3E")`}}/>;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ONBOARDING
+// ═══════════════════════════════════════════════════════════════
+const SLIDES=[
+  {icon:'🩺',title:'Triage Medical Intelligent',desc:"Decrivez vos symptomes en texte, voix ou image. L'IA analyse et vous guide etape par etape."},
+  {icon:'💊',title:'Conseils & Medicaments',desc:'Recommandations OTC precises avec dosages, precautions et signaux d alarme pour chaque situation.'},
+  {icon:'🚨',title:'Detection des Urgences',desc:"L'application identifie en temps reel les signaux critiques et vous oriente vers le bon niveau de soins."},
+];
+
+function OnboardingScreen({onDone}){
+  const[s,setS]=useState(0);
+  const next=()=>s<2?setS(v=>v+1):onDone();
+  return(
+    <div id="onboarding" className="screen active" style={{background:'var(--bg)'}}>
+      <BgIcons/>
+      <div style={{position:'relative',zIndex:1,flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'2rem 1.5rem',textAlign:'center'}}>
+        <div style={{fontSize:72,marginBottom:'1.5rem',filter:'drop-shadow(0 0 20px rgba(0,200,150,.4))',animation:'floatA 4s ease-in-out infinite'}}>{SLIDES[s].icon}</div>
+        <h1 style={{fontFamily:'Playfair Display,serif',fontSize:22,marginBottom:'.75rem',color:'var(--text)'}}>{SLIDES[s].title}</h1>
+        <p style={{color:'var(--text2)',fontSize:13,lineHeight:1.7,maxWidth:280}}>{SLIDES[s].desc}</p>
+      </div>
+      <div style={{display:'flex',justifyContent:'center',gap:8,paddingBottom:'1rem',position:'relative',zIndex:1}}>
+        {[0,1,2].map(i=><div key={i} style={{height:8,borderRadius:4,background:i===s?'var(--p)':'rgba(0,200,150,.2)',width:i===s?28:8,transition:'.3s'}}/>)}
+      </div>
+      <div style={{padding:'0 1.5rem 3rem',display:'flex',gap:12,position:'relative',zIndex:1}}>
+        <button onClick={onDone} style={{flex:1,padding:'.8rem',border:'1px solid var(--border)',borderRadius:14,background:'transparent',color:'var(--text2)',fontFamily:'DM Sans,sans-serif',fontSize:14,cursor:'pointer'}}>Passer</button>
+        <button onClick={next} style={{flex:2,padding:'.8rem',border:'none',borderRadius:14,background:'var(--p)',color:'#0a1a10',fontFamily:'DM Sans,sans-serif',fontSize:14,fontWeight:600,cursor:'pointer'}}>{s<2?'Suivant →':'Commencer'}</button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AUTH SCREEN
+// ═══════════════════════════════════════════════════════════════
+function AuthScreen({onSuccess,lang,setLang}){
+  const{login}=useContext(AuthCtx);
+  const{dark,toggle}=useContext(ThemeCtx);
+  const[mode,setMode]=useState('login');
+  const[form,setForm]=useState({name:'',email:'',password:''});
+  const[err,setErr]=useState('');
+  const[loading,setLoading]=useState(false);
+
+  const submit=async()=>{
+    if(!form.email||!form.password){setErr(tk('fillFields',lang)||'Veuillez remplir tous les champs.');return;}
+    setLoading(true);setErr('');
+    try{
+      const endpoint=mode==='register'?'/auth/register':'/auth/login';
+      const data=await apiFetch(endpoint,{method:'POST',body:{name:form.name,email:form.email,password:form.password}});
+      login(data.user);onSuccess();
+    }catch(e){
+      setErr(e.message||'Erreur de connexion.');
+    }finally{setLoading(false);}
+  };
+  const guest=async()=>{
+    try{
+      const data=await apiFetch('/auth/guest',{method:'POST'});
+      login(data.user);onSuccess();
+    }catch{
+      login({id:'guest_'+Date.now(),name:'Visiteur',email:'',isGuest:true});onSuccess();
+    }
+  };
+  const googleOAuth=()=>{
+    // Simulated — real Google OAuth requires a server-side flow
+    const fakeGoogle={id:'g_'+Date.now(),name:'Utilisateur Google',email:'user@gmail.com',isGoogle:true};
+    login(fakeGoogle);onSuccess();
+  };
+
+  return(
+    <div id="auth" className="screen active" style={{background:'var(--bg)',overflowY:'auto'}}>
+      <BgIcons/>
+      <div className="auth-panel-right">
+        <div style={{textAlign:'center',color:'var(--p)'}}>
+          <div style={{fontSize:80,marginBottom:'1rem',animation:'floatA 5s ease-in-out infinite'}}>👨‍⚕️</div>
+          <h2 style={{fontFamily:'Playfair Display,serif',fontSize:20,color:'var(--text)',marginBottom:'.5rem'}}>MediAssist AI</h2>
+          <p style={{color:'var(--text2)',fontSize:12,lineHeight:1.7}}>Votre assistant medical intelligent disponible 24h/24</p>
+          <div style={{marginTop:'2rem',display:'flex',flexWrap:'wrap',gap:8,justifyContent:'center'}}>
+            {['🫀','🧬','💊','🩺','🦠','🧠'].map(e=><span key={e} style={{fontSize:24,filter:'drop-shadow(0 0 8px rgba(0,200,150,.5))'}}>{e}</span>)}
+          </div>
+        </div>
+      </div>
+      <div className="auth-panel-left" style={{position:'relative',zIndex:1,padding:'3rem 1.5rem 2rem'}}>
+        <div style={{position:'absolute',top:'1rem',right:'1rem',display:'flex',gap:8}}>
+          <select value={lang} onChange={e=>setLang(e.target.value)} style={{padding:'4px 8px',fontSize:12,borderRadius:8,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text2)'}}>
+            <option value="fr">🇫🇷 Français</option>
+            <option value="en">🇬🇧 English</option>
+            <option value="ar">🇩🇿 العربية</option>
+          </select>
+          <button onClick={toggle} style={{background:'var(--card)',border:'1px solid var(--border)',borderRadius:10,padding:'6px 10px',color:'var(--text2)',fontSize:16,cursor:'pointer'}}>{dark?'☀️':'🌙'}</button>
+        </div>
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',marginBottom:'1.5rem'}}>
+          <div style={{width:64,height:64,borderRadius:'50%',background:'rgba(0,200,150,.15)',border:'2px solid var(--p)',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:'.75rem',boxShadow:'0 0 30px rgba(0,200,150,.3)'}} className="heartbeat">
+            <svg width="30" height="30" viewBox="0 0 50 45"><path d="M25 40 C10 28 2 20 2 12 C2 5 8 2 14 2 C19 2 23 5 25 8 C27 5 31 2 36 2 C42 2 48 5 48 12 C48 20 40 28 25 40Z" fill="#FF8B94"/></svg>
+          </div>
+          <h1 style={{fontFamily:'Playfair Display,serif',fontSize:22,color:'var(--text)'}}>MediAssist AI</h1>
+          <p style={{fontSize:11,color:'var(--text2)',fontStyle:'italic',textAlign:'center',marginTop:4,maxWidth:280}}>"La medecine est l art d amuser le patient pendant que la nature opere." — Voltaire</p>
+          <p style={{fontSize:11,fontWeight:600,color:'var(--p)',marginTop:6}}>{tk('appTagline',lang)}</p>
+        </div>
+        <div style={{background:'rgba(0,200,150,.08)',border:'1px solid var(--border)',borderRadius:14,padding:'12px',marginBottom:'1rem',display:'flex',alignItems:'center',gap:10}}>
+          <span style={{fontSize:24}}>👤</span>
+          <div style={{flex:1}}>
+            <p style={{fontSize:12,fontWeight:600,color:'var(--text)'}}>{tk('guest',lang)}</p>
+            <p style={{fontSize:11,color:'var(--text2)'}}>{tk('guestDesc',lang)}</p>
+          </div>
+          <button onClick={guest} style={{fontSize:11,background:'var(--p)',color:'#0a1a10',border:'none',borderRadius:10,padding:'6px 12px',fontWeight:600,cursor:'pointer'}}>{tk('tryGuest',lang)}</button>
+        </div>
+        <div style={{display:'flex',background:'var(--card2)',borderRadius:12,padding:4,marginBottom:'1rem'}}>
+          {['login','register'].map(m=>(
+            <button key={m} onClick={()=>setMode(m)} style={{flex:1,padding:'.55rem',borderRadius:9,border:'none',background:mode===m?'var(--card)':'transparent',color:mode===m?'var(--p)':'var(--text2)',fontFamily:'DM Sans,sans-serif',fontSize:13,fontWeight:mode===m?600:400,cursor:'pointer',transition:'.2s'}}>
+              {m==='login'?tk('login',lang):tk('register',lang)}
+            </button>
+          ))}
+        </div>
+        <div className="glass" style={{border:'1px solid var(--border)',borderRadius:20,padding:'1.25rem',marginBottom:'1rem'}}>
+          {mode==='register'&&(
+            <div style={{marginBottom:'.75rem'}}>
+              <label style={{fontSize:11,color:'var(--text2)',display:'block',marginBottom:4}}>{tk('name',lang)}</label>
+              <input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="Dr. Ahmed Benali" style={{width:'100%',padding:'.7rem 1rem',fontSize:13}}/>
+            </div>
+          )}
+          <div style={{marginBottom:'.75rem'}}>
+            <label style={{fontSize:11,color:'var(--text2)',display:'block',marginBottom:4}}>{tk('email',lang)}</label>
+            <input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="vous@email.com" style={{width:'100%',padding:'.7rem 1rem',fontSize:13}}/>
+          </div>
+          <div style={{marginBottom:'1rem'}}>
+            <label style={{fontSize:11,color:'var(--text2)',display:'block',marginBottom:4}}>{tk('password',lang)}</label>
+            <input type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} placeholder="••••••••" style={{width:'100%',padding:'.7rem 1rem',fontSize:13}} onKeyDown={e=>e.key==='Enter'&&submit()}/>
+          </div>
+          {err&&<p style={{color:'#ff4d6d',fontSize:12,marginBottom:'.75rem',textAlign:'center'}}>{err}</p>}
+          <button onClick={submit} disabled={loading} style={{width:'100%',padding:'.85rem',background:loading?'var(--pd)':'var(--p)',border:'none',borderRadius:14,color:'#0a1a10',fontFamily:'DM Sans,sans-serif',fontSize:14,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+            {loading&&<span className="spinner" style={{borderColor:'#0a1a10',borderTopColor:'transparent'}}/>}
+            {mode==='login'?tk('login',lang):tk('register',lang)}
+          </button>
+        </div>
+        <div style={{textAlign:'center',color:'var(--text3)',fontSize:12,marginBottom:'.75rem'}}>— ou continuer avec —</div>
+        <button onClick={googleOAuth} style={{width:'100%',padding:'.75rem',background:'var(--card)',border:'1px solid var(--border)',borderRadius:14,color:'var(--text)',fontFamily:'DM Sans,sans-serif',fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10}}>
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20H24v8h11.3C33.7 33 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 7.9 2.9l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.1-4z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 16 19 12 24 12c3.1 0 5.8 1.1 7.9 2.9l5.7-5.7C34.1 6.5 29.3 4 24 4c-7.7 0-14.3 4.3-17.7 10.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-1.9 13.5-5l-6.2-5.2C29.5 35.5 26.9 36 24 36c-5.2 0-9.7-3-11.3-7.3l-6.6 4.8C9.7 39.6 16.4 44 24 44z"/><path fill="#1565C0" d="M43.6 20H24v8h11.3c-.8 2.3-2.3 4.3-4.3 5.8l6.2 5.2C40.9 35.9 44 30.4 44 24c0-1.3-.1-2.7-.4-4z"/></svg>
+          Continuer avec Google
+        </button>
+      </div>
+    </div>
+  );
+}
+// ═══════════════════════════════════════════════════════════════
+// QCM WIDGET
+// ═══════════════════════════════════════════════════════════════
+function QCMWidget({onDone,lang}){
+  const[step,setStep]=useState(0);
+  const[answers,setAnswers]=useState({});
+  const qcms=[
+    {q:tk('qcmPain',lang),opts:['Tete','Gorge','Poitrine','Abdomen','Dos','Membres','Aucune']},
+    {q:tk('qcmDuration',lang),opts:['< 24h','1-3 jours','1 semaine','1+ mois']},
+    {q:tk('qcmFever',lang),opts:['Legere (37-38C)','Elevee (+38C)','Non','Je ne sais pas']},
+    {q:tk('qcmHistory',lang),opts:['Diabete','Hypertension','Asthme','Maladies cardiaques','Aucun','Je ne sais pas']},
+  ];
+  const toggle=(val)=>{
+    const cur=answers[step]||[];
+    setAnswers({...answers,[step]:cur.includes(val)?cur.filter(v=>v!==val):[...cur,val]});
+  };
+  const next=()=>{
+    if(step<qcms.length-1)setStep(s=>s+1);
+    else{const summary=Object.values(answers).flat().join(', ');onDone(summary||'non precises');}
+  };
+  const qcm=qcms[step];
+  const sel=answers[step]||[];
+  return(
+    <div className="msg-in" style={{background:'var(--card)',border:'1px solid var(--border)',borderRadius:20,padding:'1rem',marginBottom:12,maxWidth:'90%'}}>
+      <p style={{fontSize:11,color:'var(--p)',fontWeight:600,marginBottom:4}}>Question {step+1}/{qcms.length}</p>
+      <div style={{width:'100%',background:'var(--card2)',borderRadius:8,height:4,marginBottom:12}}><div style={{background:'var(--p)',height:4,borderRadius:8,transition:'all .3s',width:`${((step+1)/qcms.length)*100}%`}}/></div>
+      <p style={{fontSize:13,fontWeight:600,color:'var(--text)',marginBottom:12}}>{qcm.q}</p>
+      <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:16}}>
+        {qcm.opts.map(o=>{
+          const selected=sel.includes(o);
+          return <button key={o} onClick={()=>toggle(o)} style={{padding:'6px 14px',borderRadius:50,border:'1px solid',fontSize:12,background:selected?'var(--p)':'var(--card2)',color:selected?'#0a1a10':'var(--text2)',borderColor:selected?'var(--p)':'var(--border)',cursor:'pointer',transition:'.15s'}}>{o}</button>;
+        })}
+      </div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <button onClick={()=>onDone('libre')} style={{fontSize:11,color:'var(--text3)',background:'none',border:'none',textDecoration:'underline',cursor:'pointer'}}>{tk('writeInstead',lang)}</button>
+        <button onClick={next} style={{fontSize:12,background:'var(--p)',color:'#0a1a10',border:'none',borderRadius:12,padding:'8px 18px',fontWeight:600,cursor:'pointer'}}>{step<qcms.length-1?tk('next',lang):tk('analyze',lang)}</button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONDITION CARD
+// ═══════════════════════════════════════════════════════════════
+function ConditionCard({condition,expanded,onToggle,lang}){
+  const cfg=SEV[condition.severity]||SEV['moderee'];
+  return(
+    <div className="msg-in" style={{background:'var(--card)',border:'1px solid var(--border)',borderRadius:20,padding:'1rem',marginBottom:8,maxWidth:'95%'}}>
+      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
+        <span className={cfg.badge} style={{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20}}>{cfg.label}</span>
+      </div>
+      <h3 style={{fontSize:14,fontWeight:700,color:'var(--text)',marginBottom:4}}>{condition.name}</h3>
+      <p style={{fontSize:12,color:'var(--text2)',lineHeight:1.6,marginBottom:8}}>{condition.explanation}</p>
+      <button onClick={onToggle} style={{fontSize:11,color:'var(--p)',background:'none',border:'none',cursor:'pointer',fontWeight:600}}>{expanded?'▲ Moins de details':'▼ Plus de details'}</button>
+      {expanded&&(
+        <div style={{marginTop:12,display:'flex',flexDirection:'column',gap:12}}>
+          <div>
+            <p style={{fontSize:11,fontWeight:700,color:'var(--text)',marginBottom:6}}>⚡ Actions immediates</p>
+            {condition.immediateActions.map((a,i)=>(
+              <div key={i} style={{display:'flex',gap:8,marginBottom:4}}>
+                <span style={{color:'var(--p)',fontWeight:700,fontSize:11,minWidth:16}}>{i+1}.</span>
+                <span style={{fontSize:11,color:'var(--text2)',lineHeight:1.5}}>{a}</span>
+              </div>
+            ))}
+          </div>
+          <div>
+            <p style={{fontSize:11,fontWeight:700,color:'var(--text)',marginBottom:6}}>💊 Medicaments</p>
+            {condition.medications.map((m,i)=>{
+              const isNone=m.name.includes('AUCUN')||m.name.includes('Aucun');
+              return(
+                <div key={i} style={{background:isNone?'rgba(255,77,109,.08)':'rgba(0,200,150,.08)',border:'1px solid',borderColor:isNone?'rgba(255,77,109,.2)':'var(--border)',borderRadius:12,padding:10,marginBottom:6}}>
+                  <p style={{fontSize:12,fontWeight:600,color:'var(--text)'}}>{m.name}</p>
+                  {!isNone&&<p style={{fontSize:11,color:'var(--p)',marginTop:2}}>{m.dosage}</p>}
+                  <p style={{fontSize:10,color:isNone?'#ff4d6d':'#c8920a',marginTop:2}}>⚠️ {m.cautions}</p>
+                </div>
+              );
+            })}
+          </div>
+          <div>
+            <p style={{fontSize:11,fontWeight:700,color:'#ff4d6d',marginBottom:6}}>🚩 Signaux d alarme</p>
+            {condition.redFlags.map((f,i)=>(
+              <div key={i} style={{display:'flex',gap:6,marginBottom:3}}>
+                <span style={{color:'#ff4d6d',fontSize:10}}>•</span>
+                <span style={{fontSize:11,color:'#ff4d6d',lineHeight:1.4}}>{f}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{background:'rgba(0,200,150,.08)',border:'1px solid var(--border)',borderRadius:12,padding:10}}>
+            <p style={{fontSize:11,fontWeight:700,color:'var(--p)'}}>📋 Recommandation</p>
+            <p style={{fontSize:11,color:'var(--text2)',marginTop:4,lineHeight:1.5}}>{condition.recommendation}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TYPING INDICATOR (ECG Pulse)
+// ═══════════════════════════════════════════════════════════════
+function TypingIndicator(){
+  return(
+    <div className="msg-in" style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
+      <div style={{width:28,height:28,borderRadius:'50%',background:'rgba(0,200,150,.15)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,flexShrink:0}}>🩺</div>
+      <div style={{background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,borderBottomLeftRadius:4,padding:'10px 16px',display:'flex',alignItems:'center',gap:6}}>
+        <svg width="60" height="16" viewBox="0 0 120 30">
+          <polyline className="ecg-stroke" points="0,15 20,15 30,4 40,26 50,15 75,15 85,8 95,22 105,15 120,15" fill="none" stroke="var(--p)" strokeWidth="2.5"/>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MESSAGE COMPONENT
+// ═══════════════════════════════════════════════════════════════
+function Message({msg,onReact,onSpeak,lang,isSpeaking,user}){
+  const[isPressed,setIsPressed]=useState(false);
+  const[showReactions,setShowReactions]=useState(false);
+  const pressTimer=useRef(null);
+  const isUser=msg.role==='user';
+  const urgencyClass=msg.urgency?`urgency-${msg.urgency}`:'';
+
+  const handleTouchStart=()=>{
+    if(isUser)return;
+    pressTimer.current=setTimeout(()=>{setShowReactions(true);},600);
+  };
+  const handleTouchEnd=()=>{
+    clearTimeout(pressTimer.current);
+  };
+
+  const reactions=[
+    {emoji:'👍',key:'like',label:tk('reactionLike',lang)},
+    {emoji:'📋',key:'copy',label:tk('reactionCopy',lang)},
+    {emoji:'⚠️',key:'warn',label:tk('reactionWarn',lang)},
+    {emoji:'🔖',key:'save',label:tk('reactionSave',lang)},
+  ];
+
+  return(
+    <div className="msg-wrap msg-in" style={{display:'flex',flexDirection:isUser?'row-reverse':'row',alignItems:'flex-end',gap:8,marginBottom:12,position:'relative'}}>
+      <div style={{width:28,height:28,borderRadius:'50%',background:isUser?'var(--p)':'rgba(0,200,150,.15)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:isUser?'#0a1a10':'var(--text)',flexShrink:0}}>
+        {isUser?(user?.name?.[0]||'V'):'🩺'}
+      </div>
+      <div style={{maxWidth:'78%',position:'relative'}}>
+        {showReactions&&!isUser&&(
+          <div className="msg-reactions">
+            {reactions.map(r=>(
+              <button key={r.key} onClick={()=>{onReact(msg.id,r.key);setShowReactions(false);}} title={r.label} style={{background:'none',border:'none',fontSize:18,cursor:'pointer',padding:2}}>
+                {r.emoji}
+              </button>
+            ))}
+            <button onClick={()=>setShowReactions(false)} style={{background:'none',border:'none',fontSize:14,cursor:'pointer',color:'var(--text3)',padding:2}}>✕</button>
+          </div>
+        )}
+        <div
+          onMouseDown={handleTouchStart}
+          onMouseUp={handleTouchEnd}
+          onMouseLeave={handleTouchEnd}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          className={urgencyClass}
+          style={{background:isUser?'var(--p)':'var(--card)',border:'1px solid',borderColor:isUser?'var(--p)':'var(--border)',borderRadius:18,borderBottomRightRadius:isUser?4:18,borderBottomLeftRadius:isUser?18:4,padding:'10px 14px',color:isUser?'#0a1a10':'var(--text)',fontSize:13,lineHeight:1.6,position:'relative'}}
+        >
+          {msg.text.split('\n').map((line,i)=><p key={i} style={{margin:i>0?'4px 0 0 0':0}}>{line}</p>)}
+          {msg.image&&<img src={msg.image} alt="Medical" style={{maxWidth:'100%',borderRadius:12,marginTop:8}}/>}
+          {msg.conditions?.length>0&&(
+            <div style={{marginTop:10}}>
+              <p style={{fontSize:11,color:'var(--p)',fontWeight:600,marginBottom:6}}>🔍 Conditions probables :</p>
+              {msg.conditions.map((c,i)=><ConditionCard key={c.id} condition={c} expanded={msg.expanded===i} onToggle={()=>onReact(msg.id,'expand',i)} lang={lang}/>)}
+            </div>
+          )}
+          {msg.reactions?.length>0&&(
+            <div style={{display:'flex',gap:4,marginTop:6,flexWrap:'wrap'}}>
+              {msg.reactions.map((r,i)=><span key={i} style={{fontSize:14}}>{r==='like'?'👍':r==='copy'?'📋':r==='warn'?'⚠️':r==='save'?'🔖':r}</span>)}
+            </div>
+          )}
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:6,marginTop:4,padding:'0 4px'}}>
+          <span style={{fontSize:10,color:'var(--text3)'}}>{msg.time}</span>
+          {!isUser&&(
+            <button onClick={()=>onSpeak(msg.id,msg.text)} className="tts-btn" title={isSpeaking?tk('stopSpeak',lang):tk('speak',lang)}>
+              {isSpeaking?'⏹️':'🔊'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+// ═══════════════════════════════════════════════════════════════
+// SESSION SUMMARY CARD
+// ═══════════════════════════════════════════════════════════════
+function SessionSummary({messages,onClose,lang}){
+  const{user,addHistory}=useContext(AuthCtx);
+  const symptoms=messages.filter(m=>m.role==='user').map(m=>m.text).join('; ');
+  const aiResponses=messages.filter(m=>m.role==='ai');
+  const lastAI=aiResponses[aiResponses.length-1];
+  const conditions=lastAI?.conditions||[];
+  const topCondition=conditions[0];
+  const urgency=topCondition?SEV[topCondition.severity]:null;
+
+  const exportPDF=()=>{
+    if(!window.jspdf)return;
+    const{jsPDF}=window.jspdf;
+    const doc=new jsPDF();
+    doc.setFont('helvetica','bold');doc.setFontSize(18);
+    doc.text('MediAssist AI - Rapport Medical',14,20);
+    doc.setFont('helvetica','normal');doc.setFontSize(10);
+    doc.text(`Date: ${new Date().toLocaleDateString('fr-FR')}`,14,30);
+    doc.text(`Patient: ${user?.name||'Anonyme'}`,14,36);
+    let y=48;
+    doc.setFont('helvetica','bold');doc.text('SYMPTOMES:',14,y);y+=8;
+    doc.setFont('helvetica','normal');
+    const symLines=doc.splitTextToSize(symptoms||'Non specifies',170);
+    doc.text(symLines,14,y);y+=symLines.length*5+8;
+    if(topCondition){
+      doc.setFont('helvetica','bold');doc.text('CONDITION PROBABLE:',14,y);y+=8;
+      doc.setFont('helvetica','normal');
+      doc.text(`${topCondition.name} (${topCondition.severity.toUpperCase()})`,14,y);y+=12;
+      doc.setFont('helvetica','bold');doc.text('ACTIONS IMMEDIATES:',14,y);y+=8;
+      doc.setFont('helvetica','normal');
+      topCondition.immediateActions.forEach((a,i)=>{doc.text(`${i+1}. ${a}`,14,y);y+=6;});
+      y+=4;
+      doc.setFont('helvetica','bold');doc.text('MEDICAMENTS:',14,y);y+=8;
+      doc.setFont('helvetica','normal');
+      topCondition.medications.forEach(m=>{const lines=doc.splitTextToSize(`${m.name}: ${m.dosage}`,170);doc.text(lines,14,y);y+=lines.length*5+2;});
+    }
+    y+=8;
+    doc.setFont('helvetica','bold');doc.setTextColor(255,0,0);
+    doc.text('AVERTISSEMENT: Cet assistant ne remplace pas une consultation medicale.',14,y);
+    doc.setTextColor(0,0,0);
+    doc.save('mediassist-rapport.pdf');
+  };
+
+  return(
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal-sheet" onClick={e=>e.stopPropagation()}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+          <h3 style={{fontSize:16,fontWeight:700,color:'var(--text)'}}>{tk('sessionSummary',lang)}</h3>
+          <button onClick={onClose} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'var(--text3)'}}>✕</button>
+        </div>
+        <div className="summary-card" style={{marginBottom:12}}>
+          <div style={{marginBottom:12}}>
+            <p style={{fontSize:11,color:'var(--text3)',marginBottom:4}}>{tk('symptoms',lang)}</p>
+            <p style={{fontSize:13,color:'var(--text)'}}>{symptoms||'Non specifies'}</p>
+          </div>
+          {topCondition&&(
+            <>
+              <div style={{marginBottom:12}}>
+                <p style={{fontSize:11,color:'var(--text3)',marginBottom:4}}>{tk('probableCondition',lang)}</p>
+                <p style={{fontSize:14,fontWeight:700,color:'var(--text)'}}>{topCondition.name}</p>
+              </div>
+              <div style={{marginBottom:12}}>
+                <p style={{fontSize:11,color:'var(--text3)',marginBottom:4}}>{tk('urgency',lang)}</p>
+                <span className={urgency?.badge} style={{fontSize:12,fontWeight:700,padding:'4px 12px',borderRadius:20,display:'inline-block'}}>{urgency?.label}</span>
+              </div>
+              <div>
+                <p style={{fontSize:11,color:'var(--text3)',marginBottom:4}}>{tk('actions',lang)}</p>
+                {topCondition.immediateActions.slice(0,3).map((a,i)=>(
+                  <p key={i} style={{fontSize:12,color:'var(--text2)',marginBottom:2}}>{i+1}. {a}</p>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+        <div style={{display:'flex',gap:8}}>
+          <button onClick={exportPDF} style={{flex:1,padding:12,background:'var(--p)',color:'#0a1a10',border:'none',borderRadius:14,fontWeight:600,cursor:'pointer',fontSize:13}}>📄 {tk('export',lang)} PDF</button>
+          <button onClick={onClose} style={{flex:1,padding:12,background:'var(--card2)',color:'var(--text)',border:'1px solid var(--border)',borderRadius:14,fontWeight:600,cursor:'pointer',fontSize:13}}>{tk('close',lang)}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VOICE RECORDER
+// ═══════════════════════════════════════════════════════════════
+function VoiceRecorder({onTranscript,lang}){
+  const[isRecording,setIsRecording]=useState(false);
+  const[transcript,setTranscript]=useState('');
+  const recognitionRef=useRef(null);
+
+  useEffect(()=>{
+    if('webkitSpeechRecognition' in window||'SpeechRecognition' in window){
+      const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+      recognitionRef.current=new SR();
+      recognitionRef.current.continuous=true;
+      recognitionRef.current.interimResults=true;
+      recognitionRef.current.lang=lang==='fr'?'fr-FR':lang==='en'?'en-US':'ar-SA';
+      recognitionRef.current.onresult=(e)=>{
+        let final='';
+        for(let i=e.resultIndex;i<e.results.length;i++){
+          if(e.results[i].isFinal)final+=e.results[i][0].transcript;
+        }
+        if(final){setTranscript(prev=>prev+final);}
+      };
+      recognitionRef.current.onerror=(e)=>{console.error('Speech error',e);setIsRecording(false);};
+      recognitionRef.current.onend=()=>{if(isRecording)recognitionRef.current.start();};
+    }
+  },[lang]);
+
+  const startRecording=()=>{
+    if(!recognitionRef.current){alert('Reconnaissance vocale non supportee');return;}
+    setTranscript('');
+    setIsRecording(true);
+    recognitionRef.current.start();
+  };
+
+  const stopRecording=()=>{
+    setIsRecording(false);
+    if(recognitionRef.current)recognitionRef.current.stop();
+    if(transcript)onTranscript(transcript);
+  };
+
+  return(
+    <div style={{position:'relative'}}>
+      {isRecording&&(
+        <div style={{position:'absolute',bottom:'100%',left:'50%',transform:'translateX(-50%)',marginBottom:8,background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:'8px 16px',display:'flex',alignItems:'center',gap:8,boxShadow:'0 4px 20px rgba(0,0,0,.3)',whiteSpace:'nowrap',zIndex:20}}>
+          <div style={{display:'flex',alignItems:'center',gap:3}}>
+            {[1,2,3,4,5].map(i=><div key={i} className="vbar" style={{height:16}}/>)}
+          </div>
+          <span style={{fontSize:12,color:'var(--text2)'}}>{tk('recording',lang)}</span>
+          <span style={{fontSize:11,color:'var(--text3)'}}>{transcript}</span>
+        </div>
+      )}
+      <button
+        onMouseDown={startRecording}
+        onMouseUp={stopRecording}
+        onTouchStart={startRecording}
+        onTouchEnd={stopRecording}
+        style={{width:44,height:44,borderRadius:'50%',background:isRecording?'var(--red)':'var(--card2)',border:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',position:'relative'}}
+      >
+        {isRecording&&<div className="voice-ring"/>}
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isRecording?'#fff':'var(--text2)'} strokeWidth="2"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      </button>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SHARE MODAL
+// ═══════════════════════════════════════════════════════════════
+function ShareModal({chatId,onClose,lang}){
+  const{toggleShare}=useContext(AuthCtx);
+  const[isEnabled,setIsEnabled]=useState(false);
+  const[link,setLink]=useState('');
+  const[loading,setLoading]=useState(false);
+
+  const handleToggle=async()=>{
+    setLoading(true);
+    try{
+      const result=await toggleShare(chatId);
+      setIsEnabled(result.enabled);
+      setLink(result.enabled?result.url:'');
+    }catch{alert('Erreur lors du partage.');}
+    finally{setLoading(false);}
+  };
+
+  return(
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal-sheet" onClick={e=>e.stopPropagation()}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+          <h3 style={{fontSize:16,fontWeight:700,color:'var(--text)'}}>{tk('shareChat',lang)}</h3>
+          <button onClick={onClose} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'var(--text3)'}}>✕</button>
+        </div>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16,padding:12,background:'var(--card2)',borderRadius:14}}>
+          <span style={{fontSize:13,color:'var(--text)'}}>{isEnabled?tk('shareEnabled',lang):tk('shareDisabled',lang)}</span>
+          <div className={isEnabled?'toggle on':'toggle'} onClick={loading?undefined:handleToggle}><div className="tknob"/></div>
+        </div>
+        {isEnabled&&link&&(
+          <>
+            <div className="qr-placeholder" style={{margin:'0 auto 16px'}}>📱</div>
+            <div style={{display:'flex',gap:8,marginBottom:16}}>
+              <input value={link} readOnly style={{flex:1,padding:10,fontSize:12}}/>
+              <button onClick={()=>{navigator.clipboard?.writeText(link);alert('Lien copie !');}} style={{padding:'10px 16px',background:'var(--p)',color:'#0a1a10',border:'none',borderRadius:12,fontWeight:600,cursor:'pointer',fontSize:12}}>{tk('copyLink',lang)}</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+// ═══════════════════════════════════════════════════════════════
+// PROFILE SCREEN
+// ═══════════════════════════════════════════════════════════════
+function ProfileScreen({onBack,lang}){
+  const{user,profile,saveProfile}=useContext(AuthCtx);
+  const[form,setForm]=useState(profile);
+  const[editing,setEditing]=useState(false);
+
+  return(
+    <div className="screen active" style={{background:'var(--bg)'}}>
+      <div style={{padding:'3rem 1.5rem 1rem',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:12}}>
+        <button onClick={onBack} style={{width:36,height:36,borderRadius:'50%',background:'var(--card2)',border:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--text)'}}>←</button>
+        <h2 style={{fontSize:16,fontWeight:700,color:'var(--text)'}}>{tk('profile',lang)}</h2>
+      </div>
+      <div style={{flex:1,overflowY:'auto',padding:'1rem 1.5rem'}}>
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',marginBottom:24}}>
+          <div style={{width:80,height:80,borderRadius:'50%',background:'var(--p)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:32,marginBottom:12}}>{user?.name?.[0]||'?'}</div>
+          <h3 style={{fontSize:16,fontWeight:700,color:'var(--text)'}}>{user?.name||'Utilisateur'}</h3>
+          <p style={{fontSize:12,color:'var(--text2)'}}>{user?.email||''}</p>
+        </div>
+        <div className="profile-card">
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+            <h4 style={{fontSize:14,fontWeight:700,color:'var(--text)'}}>🩺 {tk('profile',lang)} sante</h4>
+            <button onClick={()=>{if(editing)saveProfile(form);setEditing(!editing);}} style={{fontSize:12,color:'var(--p)',background:'none',border:'none',cursor:'pointer',fontWeight:600}}>{editing?tk('save',lang):'✏️ Modifier'}</button>
+          </div>
+          {[
+            {key:'name',label:tk('name',lang)},
+            {key:'age',label:tk('age',lang)},
+            {key:'sex',label:tk('sex',lang)},
+            {key:'bloodType',label:tk('bloodType',lang)},
+            {key:'allergies',label:tk('allergies',lang)},
+            {key:'conditions',label:tk('conditions',lang)},
+          ].map(field=>(
+            <div key={field.key} style={{marginBottom:10}}>
+              <label style={{fontSize:11,color:'var(--text3)',display:'block',marginBottom:3}}>{field.label}</label>
+              {editing?(
+                field.key==='sex'?(
+                  <select value={form[field.key]||''} onChange={e=>setForm({...form,[field.key]:e.target.value})} style={{width:'100%',padding:8,fontSize:13}}>
+                    <option value="">--</option>
+                    <option value="M">Homme / Male</option>
+                    <option value="F">Femme / Female</option>
+                    <option value="O">Autre / Other</option>
+                  </select>
+                ):(
+                  <input value={form[field.key]||''} onChange={e=>setForm({...form,[field.key]:e.target.value})} style={{width:'100%',padding:8,fontSize:13}}/>
+                )
+              ):(
+                <p style={{fontSize:13,color:'var(--text2)',padding:'6px 0'}}>{form[field.key]||'--'}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HISTORY SCREEN
+// ═══════════════════════════════════════════════════════════════
+function HistoryScreen({onBack,lang}){
+  const{history}=useContext(AuthCtx);
+  return(
+    <div className="screen active" style={{background:'var(--bg)'}}>
+      <div style={{padding:'3rem 1.5rem 1rem',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:12}}>
+        <button onClick={onBack} style={{width:36,height:36,borderRadius:'50%',background:'var(--card2)',border:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--text)'}}>←</button>
+        <h2 style={{fontSize:16,fontWeight:700,color:'var(--text)'}}>{tk('history',lang)}</h2>
+      </div>
+      <div style={{flex:1,overflowY:'auto',padding:'1rem'}}>
+        {history.length===0?(
+          <div style={{textAlign:'center',padding:'4rem 1rem',color:'var(--text3)'}}>
+            <div style={{fontSize:48,marginBottom:12}}>📋</div>
+            <p style={{fontSize:14}}>{tk('noHistory',lang)}</p>
+          </div>
+        ):(
+          history.map(h=>{
+            const d=new Date(h.date);
+            return(
+              <div key={h.id} style={{background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:14,marginBottom:10}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                  <span style={{fontSize:11,color:'var(--p)',fontWeight:600}}>{tk('consultDate',lang)}</span>
+                  <span style={{fontSize:10,color:'var(--text3)'}}>{d.toLocaleDateString()} {d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>
+                </div>
+                <p style={{fontSize:12,color:'var(--text2)',lineHeight:1.5,marginBottom:6}}>{h.symptoms}</p>
+                {h.conditions?.length>0&&(
+                  <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
+                    {h.conditions.map(c=><span key={c} style={{fontSize:10,background:'rgba(0,200,150,.1)',color:'var(--p)',padding:'2px 8px',borderRadius:10}}>{c}</span>)}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MOOD TRACKER
+// ═══════════════════════════════════════════════════════════════
+function MoodTrackerScreen({onBack,lang}){
+  const{mood,addMood}=useContext(AuthCtx);
+  const[selectedMood,setSelectedMood]=useState(null);
+  const moods=[
+    {emoji:'😊',label:'Bien',value:5},
+    {emoji:'🙂',label:'Plutot bien',value:4},
+    {emoji:'😐',label:'Neutre',value:3},
+    {emoji:'😔',label:'Pas bien',value:2},
+    {emoji:'😢',label:'Mal',value:1},
+  ];
+
+  const submitMood=()=>{
+    if(selectedMood!==null){
+      addMood({mood:selectedMood,label:moods.find(m=>m.value===selectedMood)?.label||''});
+      setSelectedMood(null);
+    }
+  };
+
+  const last7Days=mood.slice(0,7);
+
+  return(
+    <div className="screen active" style={{background:'var(--bg)'}}>
+      <div style={{padding:'3rem 1.5rem 1rem',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:12}}>
+        <button onClick={onBack} style={{width:36,height:36,borderRadius:'50%',background:'var(--card2)',border:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--text)'}}>←</button>
+        <h2 style={{fontSize:16,fontWeight:700,color:'var(--text)'}}>{tk('moodTracker',lang)}</h2>
+      </div>
+      <div style={{flex:1,overflowY:'auto',padding:'1rem 1.5rem'}}>
+        <div className="profile-card" style={{marginBottom:16}}>
+          <p style={{fontSize:14,fontWeight:600,color:'var(--text)',marginBottom:16,textAlign:'center'}}>{tk('moodToday',lang)}</p>
+          <div style={{display:'flex',justifyContent:'center',gap:16,marginBottom:16}}>
+            {moods.map(m=>(
+              <button key={m.value} onClick={()=>setSelectedMood(m.value)} className={selectedMood===m.value?'mood-emoji selected':'mood-emoji'} style={{background:'none',border:'none'}}>
+                {m.emoji}
+              </button>
+            ))}
+          </div>
+          {selectedMood!==null&&(
+            <button onClick={submitMood} style={{width:'100%',padding:12,background:'var(--p)',color:'#0a1a10',border:'none',borderRadius:14,fontWeight:600,cursor:'pointer',fontSize:13}}>{tk('save',lang)}</button>
+          )}
+        </div>
+        <div className="profile-card">
+          <p style={{fontSize:14,fontWeight:600,color:'var(--text)',marginBottom:12}}>{tk('moodHistory',lang)}</p>
+          {mood.length===0?(
+            <p style={{fontSize:12,color:'var(--text3)',textAlign:'center',padding:'2rem 0'}}>Aucune entree</p>
+          ):(
+            <div style={{display:'flex',alignItems:'flex-end',gap:8,height:120,paddingBottom:8}}>
+              {last7Days.map((m,i)=>{
+                const heightPct=(m.mood/5)*100;
+                return(
+                  <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+                    <div style={{height:heightPct+'%',background:'var(--p)',borderRadius:6,width:'100%',minWidth:20,opacity:.7,animation:`barGrow .6s ease-out ${i*.1}s both`}}/>
+                    <span style={{fontSize:10,color:'var(--text3)'}}>{new Date(m.date).toLocaleDateString('fr-FR',{weekday:'short'})}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MEDICATION REMINDERS
+// ═══════════════════════════════════════════════════════════════
+function RemindersScreen({onBack,lang}){
+  const{reminders,addReminder,toggleReminder,removeReminder}=useContext(AuthCtx);
+  const[showAdd,setShowAdd]=useState(false);
+  const[newRem,setNewRem]=useState({name:'',dosage:'',time:'08:00',frequency:'daily'});
+
+  const submit=()=>{
+    if(newRem.name&&newRem.dosage){
+      addReminder(newRem);
+      setNewRem({name:'',dosage:'',time:'08:00',frequency:'daily'});
+      setShowAdd(false);
+    }
+  };
+
+  return(
+    <div className="screen active" style={{background:'var(--bg)'}}>
+      <div style={{padding:'3rem 1.5rem 1rem',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div style={{display:'flex',alignItems:'center',gap:12}}>
+          <button onClick={onBack} style={{width:36,height:36,borderRadius:'50%',background:'var(--card2)',border:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--text)'}}>←</button>
+          <h2 style={{fontSize:16,fontWeight:700,color:'var(--text)'}}>{tk('medReminders',lang)}</h2>
+        </div>
+        <button onClick={()=>setShowAdd(true)} style={{width:32,height:32,borderRadius:'50%',background:'var(--p)',color:'#0a1a10',border:'none',fontSize:20,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>+</button>
+      </div>
+      <div style={{flex:1,overflowY:'auto',padding:'1rem'}}>
+        {showAdd&&(
+          <div className="profile-card" style={{marginBottom:16}}>
+            <h4 style={{fontSize:14,fontWeight:700,color:'var(--text)',marginBottom:12}}>{tk('addReminder',lang)}</h4>
+            <div style={{marginBottom:10}}>
+              <label style={{fontSize:11,color:'var(--text3)',display:'block',marginBottom:3}}>{tk('medName',lang)}</label>
+              <input value={newRem.name} onChange={e=>setNewRem({...newRem,name:e.target.value})} style={{width:'100%',padding:8,fontSize:13}}/>
+            </div>
+            <div style={{marginBottom:10}}>
+              <label style={{fontSize:11,color:'var(--text3)',display:'block',marginBottom:3}}>{tk('dosage',lang)}</label>
+              <input value={newRem.dosage} onChange={e=>setNewRem({...newRem,dosage:e.target.value})} style={{width:'100%',padding:8,fontSize:13}}/>
+            </div>
+            <div style={{display:'flex',gap:8,marginBottom:12}}>
+              <div style={{flex:1}}>
+                <label style={{fontSize:11,color:'var(--text3)',display:'block',marginBottom:3}}>{tk('time',lang)}</label>
+                <input type="time" value={newRem.time} onChange={e=>setNewRem({...newRem,time:e.target.value})} style={{width:'100%',padding:8,fontSize:13}}/>
+              </div>
+              <div style={{flex:1}}>
+                <label style={{fontSize:11,color:'var(--text3)',display:'block',marginBottom:3}}>{tk('frequency',lang)}</label>
+                <select value={newRem.frequency} onChange={e=>setNewRem({...newRem,frequency:e.target.value})} style={{width:'100%',padding:8,fontSize:13}}>
+                  <option value="daily">{tk('daily',lang)}</option>
+                  <option value="weekly">{tk('weekly',lang)}</option>
+                </select>
+              </div>
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={()=>setShowAdd(false)} style={{flex:1,padding:10,background:'var(--card2)',color:'var(--text)',border:'1px solid var(--border)',borderRadius:12,fontWeight:600,cursor:'pointer',fontSize:12}}>{tk('cancel',lang)}</button>
+              <button onClick={submit} style={{flex:1,padding:10,background:'var(--p)',color:'#0a1a10',border:'none',borderRadius:12,fontWeight:600,cursor:'pointer',fontSize:12}}>{tk('save',lang)}</button>
+            </div>
+          </div>
+        )}
+        {reminders.length===0?(
+          <div style={{textAlign:'center',padding:'4rem 1rem',color:'var(--text3)'}}>
+            <div style={{fontSize:48,marginBottom:12}}>💊</div>
+            <p style={{fontSize:14}}>{tk('noReminders',lang)}</p>
+          </div>
+        ):(
+          reminders.map(r=>{
+            const d=new Date();
+            const [h,m]=r.time.split(':');
+            d.setHours(parseInt(h),parseInt(m));
+            return(
+              <div key={r.id} className="reminder-item" style={{opacity:r.active?1:.5}}>
+                <div style={{width:40,height:40,borderRadius:'50%',background:'rgba(0,200,150,.15)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}}>💊</div>
+                <div style={{flex:1}}>
+                  <p style={{fontSize:13,fontWeight:600,color:'var(--text)'}}>{r.name}</p>
+                  <p style={{fontSize:11,color:'var(--text2)'}}>{r.dosage} • {r.time} • {r.frequency==='daily'?tk('daily',lang):tk('weekly',lang)}</p>
+                </div>
+                <div style={{display:'flex',gap:6}}>
+                  <button onClick={()=>toggleReminder(r.id)} style={{width:32,height:32,borderRadius:'50%',background:r.active?'var(--p)':'var(--card2)',border:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:14}}>{r.active?'🔔':'🔕'}</button>
+                  <button onClick={()=>removeReminder(r.id)} style={{width:32,height:32,borderRadius:'50%',background:'rgba(255,77,109,.1)',border:'1px solid rgba(255,77,109,.2)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:14,color:'#ff4d6d'}}>🗑️</button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PHARMACY / CLINIC FINDER
+// ═══════════════════════════════════════════════════════════════
+function PharmacyFinderScreen({onBack,lang,type}){
+  const[loading,setLoading]=useState(false);
+  const[places,setPlaces]=useState([]);
+
+  const search=()=>{
+    setLoading(true);
+    setTimeout(()=>{
+      setPlaces([
+        {name:type==='pharmacy'?'Pharmacie Centrale':'Clinique du Parc',dist:'0.8 km',addr:'15 Rue de la Sante, Paris',open:'Ouvert 24h/24'},
+        {name:type==='pharmacy'?'Pharmacie du Marche':'Hopital Saint-Louis',dist:'1.2 km',addr:'42 Avenue Principale, Paris',open:'Ouvert jusqu a 20h'},
+        {name:type==='pharmacy'?'Pharmacie de Garde':'Clinique Montmartre',dist:'2.5 km',addr:'8 Rue des Lilas, Paris',open:'Garde de nuit'},
+      ]);
+      setLoading(false);
+    },1500);
+  };
+
+  useEffect(()=>{search();},[]);
+
+  return(
+    <div className="screen active" style={{background:'var(--bg)'}}>
+      <div style={{padding:'3rem 1.5rem 1rem',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:12}}>
+        <button onClick={onBack} style={{width:36,height:36,borderRadius:'50%',background:'var(--card2)',border:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--text)'}}>←</button>
+        <h2 style={{fontSize:16,fontWeight:700,color:'var(--text)'}}>{type==='pharmacy'?tk('nearestPharmacy',lang):tk('nearestClinic',lang)}</h2>
+      </div>
+      <div style={{flex:1,overflowY:'auto',padding:'1rem'}}>
+        <div className="map-placeholder" style={{marginBottom:16}}>
+          <span style={{fontSize:48}}>🗺️</span>
+          <p style={{fontSize:13,color:'var(--text2)'}}>Carte interactive</p>
+          <button onClick={()=>window.open(`https://maps.google.com/?q=${type==='pharmacy'?'pharmacy':'clinic'}+near+me`)} style={{padding:'8px 16px',background:'var(--p)',color:'#0a1a10',border:'none',borderRadius:12,fontSize:12,fontWeight:600,cursor:'pointer'}}>{tk('openMaps',lang)}</button>
+        </div>
+        {loading?(
+          <div style={{textAlign:'center',padding:'2rem',color:'var(--text3)'}}><span className="spinner"/></div>
+        ):(
+          places.map((p,i)=>{
+            const colors=['#00C896','#4A90A4','#FF8B94'];
+            return(
+              <div key={i} style={{background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:14,marginBottom:10}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:6}}>
+                  <h4 style={{fontSize:14,fontWeight:700,color:'var(--text)'}}>{p.name}</h4>
+                  <span style={{fontSize:11,background:colors[i]+'20',color:colors[i],padding:'2px 8px',borderRadius:10,fontWeight:600}}>{p.dist}</span>
+                </div>
+                <p style={{fontSize:12,color:'var(--text2)',marginBottom:4}}>📍 {p.addr}</p>
+                <p style={{fontSize:11,color:'var(--p)'}}>🕐 {p.open}</p>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+// ═══════════════════════════════════════════════════════════════
+// MAIN CHAT SCREEN
+// ═══════════════════════════════════════════════════════════════
+function ChatScreen({lang,setLang}){
+  const{user,logout,addHistory,profile}=useContext(AuthCtx);
+  const{dark,toggle}=useContext(ThemeCtx);
+  const[messages,setMessages]=useState([]);
+  const[input,setInput]=useState('');
+  const[isLoading,setIsLoading]=useState(false);
+  const[showQCM,setShowQCM]=useState(false);
+  const[drawerOpen,setDrawerOpen]=useState(false);
+  const[showSummary,setShowSummary]=useState(false);
+  const[showShare,setShowShare]=useState(false);
+  const[showProfile,setShowProfile]=useState(false);
+  const[showHistory,setShowHistory]=useState(false);
+  const[showMood,setShowMood]=useState(false);
+  const[showReminders,setShowReminders]=useState(false);
+  const[showPharmacy,setShowPharmacy]=useState(false);
+  const[showCertif,setShowCertif]=useState(false);
+  const[subScreen,setSubScreen]=useState(null);
+  const[speakingId,setSpeakingId]=useState(null);
+  const[chatId]=useState(()=>'chat_'+Date.now());
+  const messagesEndRef=useRef(null);
+  const inputRef=useRef(null);
+  const fileRef=useRef(null);
+  const synthRef=useRef(null);
+
+  useEffect(()=>{messagesEndRef.current?.scrollIntoView({behavior:'smooth'});},[messages,isLoading]);
+
+  useEffect(()=>{
+    setTimeout(()=>{
+      addMsg('ai',tk('welcome',lang));
+      setShowQCM(true);
+    },400);
+  },[lang]);
+
+  const addMsg=(role,text,extra={})=>{
+    const msg={id:Date.now()+Math.random(),role,text,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),reactions:[],...extra};
+    setMessages(prev=>[...prev,msg]);
+    return msg.id;
+  };
+
+  const SYSTEM_PROMPT=`Tu es MediAssist, un assistant medical IA expert et empathique de niveau medecin generaliste. 
+Reponds toujours en ${lang==='fr'?'francais':lang==='en'?'anglais':'arabe'}.
+Comportement : calme, professionnel, rassurant. Ne jamais paniquer le patient.
+Tu as une connaissance approfondie de : maladies infectieuses, cardiologie, gastro-enterologie, neurologie, dermatologie, ORL, orthopedie, pediatrie, sante mentale, pharmacologie.
+Pour chaque reponse :
+1. Identifie les symptomes probables
+2. Donne une explication claire
+3. Liste les actions immediates (numérotées)
+4. Recommande des medicaments OTC si approprie avec dosages
+5. Signale les drapeaux rouges
+6. Termine TOUJOURS par : ⚠️ ${tk('disclaimerFull',lang)}`;
+
+  const sendToAI=async(userText,imageData=null)=>{
+    setIsLoading(true);
+    const matches=matchConditions(userText);
+    const topMatch=matches[0];
+    const urgency=topMatch?SEV[topMatch.severity]?.urgency:null;
+
+    try{
+      let reply='';
+      if(imageData){
+        // Extract base64 data from dataURL (strip "data:image/jpeg;base64," prefix)
+        const [meta,base64]=imageData.split(',');
+        const mediaType=meta.match(/:(.*?);/)?.[1]||'image/jpeg';
+        const data=await apiFetch('/chat/image',{method:'POST',body:{base64,mediaType,lang,chatId}});
+        reply=data.reply||'';
+      }else{
+        const apiMessages=[
+          ...messages.filter(m=>m.role!=='ai'||!m.conditions).slice(-6).map(m=>({
+            role:m.role==='ai'?'assistant':'user',
+            content:m.text
+          })),
+          {role:'user',content:userText}
+        ];
+        const data=await apiFetch('/chat',{method:'POST',body:{messages:apiMessages,system:SYSTEM_PROMPT,lang,chatId}});
+        reply=data.reply||'';
+      }
+      setIsLoading(false);
+      addMsg('ai',reply,{conditions:matches.length>0?matches:null,urgency});
+      addHistory({symptoms:userText,conditions:matches.map(c=>c.name),response:reply,chatId});
+    }catch(e){
+      setIsLoading(false);
+      const fallbackReply=topMatch?generateFallbackReply(topMatch,lang):`Je n'ai pas pu me connecter a l'IA. Voici une analyse locale basee sur vos symptomes.
+
+${matches.map((c,i)=>`${i+1}. ${c.name} (${SEV[c.severity]?.label})`).join('\n')}
+
+⚠️ ${tk('disclaimerFull',lang)}`;
+      addMsg('ai',fallbackReply,{conditions:matches.length>0?matches:null,urgency});
+    }
+  };
+
+  const generateFallbackReply=(condition,lang)=>{
+    const cfg=SEV[condition.severity];
+    return `${condition.name} - ${cfg.label}
+
+${condition.explanation}
+
+Actions immediates :
+${condition.immediateActions.map((a,i)=>`${i+1}. ${a}`).join('\n')}
+
+Medicaments :
+${condition.medications.filter(m=>!m.name.includes('AUCUN')).map(m=>`• ${m.name}: ${m.dosage}`).join('\n')}
+
+Signaux d alarme :
+${condition.redFlags.map(rf=>`• ${rf}`).join('\n')}
+
+${condition.recommendation}
+
+⚠️ ${tk('disclaimerFull',lang)}`;
+  };
+
+  const handleSend=async()=>{
+    const text=input.trim();if(!text)return;
+    setInput('');setShowQCM(false);
+    addMsg('user',text);
+    await sendToAI(text);
+  };
+
+  const handleQCMDone=async(summary)=>{
+    setShowQCM(false);
+    if(summary==='libre'){inputRef.current?.focus();return;}
+    const text=`Mes symptomes : ${summary}`;
+    addMsg('user',text);
+    await sendToAI(text);
+  };
+
+  const handleImage=(e)=>{
+    const file=e.target.files?.[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=async(ev)=>{
+      const dataUrl=ev.target.result;
+      addMsg('user',`📷 Image medicale : ${file.name}`,{image:dataUrl});
+      await sendToAI('Analyse cette image medicale',dataUrl);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleReact=(msgId,action,value)=>{
+    setMessages(prev=>prev.map(m=>{
+      if(m.id!==msgId)return m;
+      if(action==='expand')return{...m,expanded:value};
+      if(action==='copy'){navigator.clipboard?.writeText(m.text);alert('Texte copie !');return m;}
+      return{...m,reactions:[...(m.reactions||[]),action]};
+    }));
+  };
+
+  const handleSpeak=(msgId,text)=>{
+    if(speakingId===msgId){
+      window.speechSynthesis?.cancel();
+      setSpeakingId(null);
+      return;
+    }
+    if('speechSynthesis' in window){
+      window.speechSynthesis.cancel();
+      const utter=new SpeechSynthesisUtterance(text);
+      utter.lang=lang==='fr'?'fr-FR':lang==='en'?'en-US':'ar-SA';
+      utter.rate=.9;
+      utter.onend=()=>setSpeakingId(null);
+      window.speechSynthesis.speak(utter);
+      setSpeakingId(msgId);
+    }
+  };
+
+  const handleVoiceTranscript=(text)=>{
+    setInput(prev=>prev+(prev?' ':'')+text);
+    inputRef.current?.focus();
+  };
+
+  const exportPDF=()=>{
+    if(!window.jspdf)return;
+    const{jsPDF}=window.jspdf;
+    const doc=new jsPDF();
+    doc.setFont('helvetica','bold');doc.setFontSize(16);
+    doc.text('MediAssist AI - Rapport',14,20);
+    doc.setFont('helvetica','normal');doc.setFontSize(10);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`,14,30);
+    let y=42;
+    messages.forEach(m=>{
+      if(y>270){doc.addPage();y=20;}
+      doc.setFont('helvetica','bold');
+      doc.text(m.role==='user'?'Patient:':'Assistant:',14,y);
+      doc.setFont('helvetica','normal');
+      const lines=doc.splitTextToSize(m.text,170);
+      doc.text(lines,14,y+6);y+=8+lines.length*5;
+    });
+    doc.save('mediassist-consultation.pdf');
+  };
+
+  const QUICK_REPLIES=[tk('quickMeds',lang),tk('quickSerious',lang),tk('quickWhen',lang),tk('quickFirstAid',lang)];
+
+  if(subScreen==='profile')return<ProfileScreen onBack={()=>setSubScreen(null)} lang={lang}/>;
+  if(subScreen==='history')return<HistoryScreen onBack={()=>setSubScreen(null)} lang={lang}/>;
+  if(subScreen==='mood')return<MoodTrackerScreen onBack={()=>setSubScreen(null)} lang={lang}/>;
+  if(subScreen==='reminders')return<RemindersScreen onBack={()=>setSubScreen(null)} lang={lang}/>;
+  if(subScreen==='pharmacy')return<PharmacyFinderScreen onBack={()=>setSubScreen(null)} lang={lang} type="pharmacy"/>;
+  if(subScreen==='clinic')return<PharmacyFinderScreen onBack={()=>setSubScreen(null)} lang={lang} type="clinic"/>;
+
+  return(
+    <div className="screen active" style={{background:'var(--bg)'}}>
+      {/* Drawer */}
+      <div className={drawerOpen?'overlay open':'overlay'} onClick={()=>setDrawerOpen(false)}/>
+      <div className={drawerOpen?'drawer open':'drawer'}>
+        <div style={{padding:'2.5rem 1.25rem 1rem',borderBottom:'1px solid var(--border)'}}>
+          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
+            <div style={{width:44,height:44,borderRadius:'50%',background:'var(--p)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,fontWeight:700,color:'#0a1a10'}}>{user?.name?.[0]||'G'}</div>
+            <div>
+              <p style={{fontSize:14,fontWeight:700,color:'var(--text)'}}>{user?.name||'Visiteur'}</p>
+              <p style={{fontSize:11,color:'var(--text3)'}}>{user?.isGuest?'Mode invite':user?.email}</p>
+            </div>
+          </div>
+          <div style={{display:'flex',gap:6}}>
+            {['🫀','🩺','🧬','💊','🦠'].map((ic,i)=><div key={i} style={{width:28,height:28,borderRadius:8,background:'rgba(0,200,150,.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14}}>{ic}</div>)}
+          </div>
+        </div>
+        <div style={{flex:1,overflowY:'auto',padding:'.75rem'}}>
+          <p style={{fontSize:10,color:'var(--text3)',textTransform:'uppercase',letterSpacing:1,padding:'8px 8px 4px',fontWeight:600}}>{tk('language',lang)}</p>
+          <div style={{display:'flex',gap:6,padding:'0 8px 12px'}}>
+            {['fr','en','ar'].map(l=>{
+              const labels={fr:'🇫🇷 Français',en:'🇬🇧 English',ar:'🇩🇿 العربية'};
+              return<button key={l} onClick={()=>{setLang(l);setDrawerOpen(false);}} style={{flex:1,padding:'6px 4px',borderRadius:10,border:'1px solid',borderColor:lang===l?'var(--p)':'var(--border)',background:lang===l?'rgba(0,200,150,.1)':'transparent',color:lang===l?'var(--p)':'var(--text3)',fontSize:11,cursor:'pointer'}}>{labels[l]}</button>;
+            })}
+          </div>
+          <div style={{padding:'0 8px'}}>
+            <button onClick={()=>{toggle();setDrawerOpen(false);}} style={{width:'100%',display:'flex',alignItems:'center',gap:12,padding:'10px 8px',borderRadius:12,background:'none',border:'none',color:'var(--text)',cursor:'pointer',fontSize:13}}>
+              <span style={{fontSize:18}}>{dark?'☀️':'🌙'}</span>
+              <span>{dark?tk('lightMode',lang):tk('darkMode',lang)}</span>
+            </button>
+          </div>
+          <div style={{height:1,background:'var(--border)',margin:'8px 12px'}}/>
+          {[
+            {icon:'💬',label:tk('newConsult',lang),action:()=>{setMessages([]);setShowQCM(false);setDrawerOpen(false);setTimeout(()=>{addMsg('ai',tk('welcome',lang));setShowQCM(true);},200);}},
+            {icon:'📊',label:tk('history',lang),action:()=>{setSubScreen('history');setDrawerOpen(false);}},
+            {icon:'📄',label:tk('exportPDF',lang),action:()=>{exportPDF();setDrawerOpen(false);}},
+            {icon:'🔗',label:tk('shareChat',lang),action:()=>{setShowShare(true);setDrawerOpen(false);}},
+            {icon:'💊',label:tk('medReminders',lang),action:()=>{setSubScreen('reminders');setDrawerOpen(false);}},
+            {icon:'📍',label:tk('findClinic',lang),action:()=>{setSubScreen('clinic');setDrawerOpen(false);}},
+            {icon:'📈',label:tk('symptomGraph',lang),action:()=>{setSubScreen('history');setDrawerOpen(false);}},
+            {icon:'😊',label:tk('moodTracker',lang),action:()=>{setSubScreen('mood');setDrawerOpen(false);}},
+            {icon:'👤',label:tk('profile',lang),action:()=>{setSubScreen('profile');setDrawerOpen(false);}},
+          ].map(item=>(
+            <button key={item.label} onClick={item.action} style={{width:'100%',display:'flex',alignItems:'center',gap:12,padding:'10px 8px',borderRadius:12,background:'none',border:'none',color:'var(--text)',cursor:'pointer',fontSize:13,textAlign:'left'}}>
+              <span style={{width:32,height:32,borderRadius:10,background:'rgba(0,200,150,.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16}}>{item.icon}</span>
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
+        <div style={{padding:'1rem',borderTop:'1px solid var(--border)'}}>
+          <button onClick={()=>{logout();setDrawerOpen(false);}} style={{width:'100%',padding:12,borderRadius:14,border:'1px solid rgba(255,77,109,.2)',background:'rgba(255,77,109,.05)',color:'#ff4d6d',fontSize:13,fontWeight:600,cursor:'pointer'}}>🚪 {tk('logout',lang)}</button>
+          <p style={{textAlign:'center',fontSize:10,color:'var(--text3)',marginTop:8}}>MediAssist v2.0 · {tk('disclaimer',lang)}</p>
+        </div>
+      </div>
+
+      {/* Header */}
+      <HeaderStrip/>
+      <div style={{padding:'.75rem 1rem',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:12,background:'var(--card)'}}>
+        <button onClick={()=>setDrawerOpen(true)} style={{width:36,height:36,borderRadius:12,background:'var(--card2)',border:'1px solid var(--border)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,cursor:'pointer'}}>
+          <span style={{width:16,height:2,background:'var(--text2)',borderRadius:2}}/>
+          <span style={{width:16,height:2,background:'var(--text2)',borderRadius:2}}/>
+          <span style={{width:16,height:2,background:'var(--text2)',borderRadius:2}}/>
+        </button>
+        <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center'}}>
+          <h1 style={{fontSize:15,fontWeight:700,color:'var(--text)',letterSpacing:.5}}>MediAssist AI</h1>
+          <svg width="80" height="14" viewBox="0 0 120 20">
+            <polyline className="ecg-stroke" points="0,10 20,10 28,3 36,17 44,10 66,10 74,5 82,15 90,10 120,10" fill="none" stroke="var(--p)" strokeWidth="2"/>
+          </svg>
+        </div>
+        <div style={{width:36,height:36,borderRadius:'50%',background:'rgba(0,200,150,.15)',border:'2px solid var(--p)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:'var(--p)',cursor:'pointer'}} onClick={()=>setSubScreen('profile')}>
+          {user?.name?.[0]||'G'}
+        </div>
+      </div>
+
+      {/* Disclaimer Banner */}
+      <div style={{background:'rgba(0,200,150,.06)',borderBottom:'1px solid var(--border)',padding:'6px 1rem',display:'flex',alignItems:'center',gap:8}}>
+        <span style={{fontSize:12}}>⚕️</span>
+        <span style={{fontSize:10,color:'var(--text3)',flex:1}}>{tk('disclaimer',lang)}</span>
+      </div>
+
+      {/* Messages */}
+      <div style={{flex:1,overflowY:'auto',padding:'1rem',display:'flex',flexDirection:'column'}}>
+        {messages.map(msg=>{
+          const isUser=msg.role==='user';
+          const cfg=msg.urgency?SEV[Object.keys(SEV).find(k=>SEV[k].urgency===msg.urgency)||'moderee']:null;
+          return(
+            <div key={msg.id} className="msg-in" style={{display:'flex',flexDirection:isUser?'row-reverse':'row',alignItems:'flex-end',gap:8,marginBottom:12}}>
+              <div style={{width:28,height:28,borderRadius:'50%',background:isUser?'var(--p)':'rgba(0,200,150,.15)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:isUser?'#0a1a10':'var(--p)',flexShrink:0}}>
+                {isUser?(user?.name?.[0]||'V'):'🩺'}
+              </div>
+              <div style={{maxWidth:'78%'}}>
+                <div style={{background:isUser?'var(--p)':'var(--card)',border:'1px solid',borderColor:isUser?'var(--p)':'var(--border)',borderRadius:18,borderBottomRightRadius:isUser?4:18,borderBottomLeftRadius:isUser?18:4,padding:'10px 14px',color:isUser?'#0a1a10':'var(--text)',fontSize:13,lineHeight:1.6,position:'relative',borderLeft:cfg&&!isUser?`4px solid ${cfg.color}`:'none'}}>
+                  {msg.text.split('\n').map((line,i)=><p key={i} style={{margin:i>0?'4px 0 0 0':0}}>{line}</p>)}
+                  {msg.image&&<img src={msg.image} alt="Medical" style={{maxWidth:'100%',borderRadius:12,marginTop:8}}/>}
+                  {msg.conditions?.length>0&&(
+                    <div style={{marginTop:10}}>
+                      <p style={{fontSize:11,color:'var(--p)',fontWeight:600,marginBottom:6}}>🔍 Conditions probables :</p>
+                      {msg.conditions.map((c,i)=>{
+                        const sevCfg=SEV[c.severity];
+                        return(
+                          <div key={c.id} style={{background:'var(--card2)',border:'1px solid var(--border)',borderRadius:12,padding:10,marginBottom:6}}>
+                            <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+                              <span className={sevCfg.badge} style={{fontSize:9,fontWeight:700,padding:'2px 8px',borderRadius:20}}>{sevCfg.label}</span>
+                              <span style={{fontSize:12,fontWeight:700,color:'var(--text)'}}>{c.name}</span>
+                            </div>
+                            <p style={{fontSize:11,color:'var(--text2)',lineHeight:1.5}}>{c.explanation}</p>
+                          </div>
+                        );
+                      })}
+                   
+              <span style={{fontSize:10,color:'var(--text3)'}}>{msg.time}</span>
+              {!isUser&&(
+                <button onClick={()=>handleSpeak(msg.id,msg.text)} style={{width:20,height:20,borderRadius:'50%',background:'var(--card2)',border:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:10}}>
+                  {speakingId===msg.id?'⏹️':'🔊'}
+                </button>
+              )}
+              {msg.reactions?.length>0&&(
+                <div style={{display:'flex',gap:2}}>
+                  {msg.reactions.map((r,i)=><span key={i} style={{fontSize:12}}>{r==='like'?'👍':r==='copy'?'📋':r==='warn'?'⚠️':r==='save'?'🔖':r}</span>)}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    })}
+    {showQCM&&messages.length>0&&<QCMWidget onDone={handleQCMDone} lang={lang}/>}
+    {isLoading&&<TypingIndicator/>}
+    {!isLoading&&messages.length>1&&!showQCM&&(
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:4,marginBottom:8,paddingLeft:36}}>
+        {QUICK_REPLIES.map(q=>(
+          <button key={q} onClick={()=>{addMsg('user',q);sendToAI(q);}} style={{padding:'6px 14px',background:'var(--card)',border:'1px solid var(--border)',borderRadius:50,fontSize:11,color:'var(--p)',cursor:'pointer',transition:'.15s'}}>
+            {q}
+          </button>
+        ))}
+      </div>
+    )}
+    <div ref={messagesEndRef}/>
+  </div>
+
+  {/* Input Bar */}
+  <div style={{padding:'.75rem 1rem',borderTop:'1px solid var(--border)',background:'var(--card)',display:'flex',alignItems:'flex-end',gap:8}}>
+    <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImage} style={{display:'none'}}/>
+    <button onClick={()=>fileRef.current?.click()} style={{width:40,height:40,borderRadius:14,background:'var(--card2)',border:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0}}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text2)" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    </button>
+    <VoiceRecorder onTranscript={handleVoiceTranscript} lang={lang}/>
+    <textarea
+      ref={inputRef}
+      value={input}
+      onChange={e=>setInput(e.target.value)}
+      onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleSend();}}}
+      placeholder={tk('placeholder',lang)}
+      rows={1}
+      style={{flex:1,resize:'none',background:'var(--card2)',border:'1px solid var(--border)',borderRadius:18,padding:'10px 14px',fontSize:13,color:'var(--text)',maxHeight:100,minHeight:40,overflowY:'auto'}}
+    />
+    <button onClick={handleSend} disabled={isLoading||!input.trim()} style={{width:40,height:40,borderRadius:14,background:'var(--p)',border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,opacity:isLoading||!input.trim()?.5:1}}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a1a10" strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9 22,2"/></svg>
+    </button>
+  </div>
+
+  {/* Modals */}
+  {showSummary&&<SessionSummary messages={messages} onClose={()=>setShowSummary(false)} lang={lang}/>}
+  {showShare&&<ShareModal chatId={chatId} onClose={()=>setShowShare(false)} lang={lang}/>}
+</div>
+);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// APP ROOT
+// ═══════════════════════════════════════════════════════════════
+function AppInner({screen,setScreen,lang,setLang,onFinishOnboarding,onAuth}){
+const{user}=useContext(AuthCtx);
+useEffect(()=>{
+if(user&&screen==='auth')setScreen('chat');
+if(!user&&screen==='chat')setScreen('auth');
+},[user,screen]);
+
+if(screen==='onboarding')return<OnboardingScreen onDone={onFinishOnboarding}/>;
+if(screen==='auth'||!user)return<AuthScreen onSuccess={onAuth} lang={lang} setLang={setLang}/>;
+return<ChatScreen lang={lang} setLang={setLang}/>;
+}
+
+function App(){
+const[screen,setScreen]=useState(()=>localStorage.getItem('mt_seen')?(JSON.parse(localStorage.getItem('mt_user')||'null')?'chat':'auth'):'onboarding');
+const[lang,setLang]=useState('fr');
+const finishOnboarding=()=>{localStorage.setItem('mt_seen','1');setScreen('auth');};
+const handleAuth=()=>setScreen('chat');
+return<AppInner screen={screen} setScreen={setScreen} lang={lang} setLang={setLang} onFinishOnboarding={finishOnboarding} onAuth={handleAuth}/>;
+}
+
+const root=ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+<ThemeProvider>
+  <AuthProvider>
+    <App/>
+  </AuthProvider>
+</ThemeProvider>
+);
+</script>
+</body>
+</html>
