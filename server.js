@@ -25,6 +25,7 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5000',
   'http://127.0.0.1:5000',
+  'https://meditriage-backend-9p44.onrender.com',
   'capacitor://localhost',
   'http://localhost',
   'https://dividing-lucrative-capacity.ngrok-free.dev',
